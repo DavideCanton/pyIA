@@ -34,6 +34,8 @@ class Clause:
     def __init__(self, pos, neg):
         """Creates a disjunction with every variable in pos occurring
         positively and every variable in neg occurring negatively"""
+        if not pos and not neg:
+            raise ValueError("Empty pos and neg")
         self.pos_list = frozenset(pos)
         self.neg_list = frozenset(neg)
 
@@ -53,7 +55,7 @@ class Clause:
                 return True
         return False
 
-    def __repr__(self):
+    def __str__(self):
         o = " " + Clause.or_sep + " "
         sp = o.join("{}".format(var.name) for var in self.pos_list)
         sn = o.join("\xac{}".format(var.name) for var in self.neg_list)

@@ -2,7 +2,6 @@ import heapq
 from collections import deque
 from functools import total_ordering
 
-# NOTE this module is subject to changes
 
 # infinite represented by -1
 INFINITE = -1

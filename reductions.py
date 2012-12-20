@@ -1,4 +1,4 @@
-from sat import wsat_solve, build_clauses
+from .sat import wsat_solve, build_clauses
 import itertools as it
 
 
