@@ -76,53 +76,6 @@ def a_star(start, goal, h, gen_children, callback=None):
     return None, None, info
 
 
-def a_star_graph(start, goal, h, gen_children, callback=None):
-    n = Node(start)
-    n.value = h(start)
-    L = [n]
-    visited = {}
-    info = Info()
-
-    while L:
-        if callback:
-            callback(L)
-
-        info.maxl = max(len(L), info.maxl)
-        info.nodes += 1
-
-        current = heapq.heappop(L)
-
-        if goal(current.content):
-            n = current
-            pc = []
-            while n:
-                pc.append(n.content)
-                n = n.parent
-            pc.reverse()
-            return pc, visited, info
-
-        if current.content in visited:
-            v = visited[current.content]
-            if current.value < v:
-                visited[current.content] = current.value
-        else:
-            visited[current.content] = current.value
-
-        for child in gen_children(current.content):
-            x = Node(child, current)
-            x.depth = current.depth + 1
-            x.value = h(child) + x.depth
-            if child in visited:
-                v = visited[child]
-                if x.value < v:
-                    visited[child] = v
-            else:
-                heapq.heappush(L, x)
-                visited[child] = x.value
-
-    return None, None, info
-
-
 def generic_search(start, is_goal, gen_children,
                    L, get_func, put_func, callback=None):
 
