@@ -1,4 +1,4 @@
-from sat import wsat_solve, build_clauses
+from sat import wsat_solve, build_formula
 import itertools as it
 
 
@@ -22,8 +22,9 @@ def buildFormulaClique(edges):
 if __name__ == '__main__':
     edges = "ab|bc|bd|ae|be|ac|ce"
     edges = [tuple(e) for e in edges.split("|")]
-    formula = buildFormulaIS(edges)
-    vars, clauses = build_clauses(formula)
+    formulaS = buildFormulaIS(edges)
+    formula = build_formula(formulaS)
+    clauses, vars = formula.clauses, formula.vars
     print(" ^ ".join(map(str, clauses)))
 
     iterations = 1000
@@ -33,5 +34,5 @@ if __name__ == '__main__':
         if ok(sol):
             print([var.name for var in sol])
             exit()
-        sol = wsat_solve(clauses, vars)
+        sol = wsat_solve(formula)
     print("Nessuna soluzione trovata")

@@ -1,5 +1,6 @@
 from random import randint, sample, random, choice
 from functools import total_ordering
+import itertools as it
 import re
 
 
@@ -24,6 +25,25 @@ class Variable:
     __hash__ = lambda self: self._id
     __eq__ = lambda self, v: self.name == v.name
     __lt__ = lambda self, v: self.name < v.name
+
+
+class Formula:
+    def __init__(self, vars, clauses):
+        self.vars = frozenset(vars)
+        self.clauses = clauses
+
+    def clause_eval(self, assignment):
+        "Returns the number of clauses satisfied by assignment"
+        return sum(c.satisfied(assignment) for c in self.clauses)
+
+    def satisfied(self, assignment):
+        return all(c.satisfied(assignment) for c in self.clauses)
+
+    @property
+    def models(self):
+        for assignment in _generateSubsets(self.vars):
+            if self.satisfied(assignment):
+                yield assignment
 
 
 class Clause:
@@ -75,24 +95,20 @@ class Clause:
         return 13 * hash(self.var_list) + 17 * hash(self.neg)
 
 
-def clause_eval(cl_list, assignment):
-    "Returns the number of clauses in cl_list satisfied by assignment"
-    return sum(c.satisfied(assignment) for c in cl_list)
-
-
-def gsat_solve(clauses, vars, maxtries=1000):
+def gsat_solve(formula, maxtries=1000):
     """Tries to solve a list of clauses with vars, resetting
     at most maxtries times using GSAT (greedy SAT) heuristic algorithm."""
     for _ in range(maxtries):
-        solution = _tryToSolveG(clauses, vars)
+        solution = _tryToSolveG(formula)
         if solution is not None:
             return solution
 
 
-def _tryToSolveG(clauses, vars):
+def _tryToSolveG(formula):
+    clauses, vars = formula.clauses, formula.vars
     # compute random initial assignment
     assignment = sample(vars, randint(0, len(vars)))
-    cur = clause_eval(clauses, assignment)
+    cur = formula.clause_eval(assignment)
     while True:
         # if reached a model, returns it
         if cur == len(clauses):
@@ -102,7 +118,7 @@ def _tryToSolveG(clauses, vars):
         # all possible value flips for variables
         for next in _nextAssignment(assignment, vars):
             # evaluates the new assignment
-            v = clause_eval(clauses, next)
+            v = formula.clause_eval(next)
             # if found, exit
             if v == len(clauses):
                 return next
@@ -129,20 +145,21 @@ def _nextAssignment(assignment, vars):
         yield next_assignment
 
 
-def wsat_solve(clauses, vars, maxtries=1000, p=.9):
+def wsat_solve(formula, maxtries=1000, p=.9):
     """Tries to solve a list of clauses with vars, resetting
     at most maxtries times with the WSAT (walking SAT) heuristic algorithm.
     The parameter p represent the probability of executing a GSAT iteration."""
     for _ in range(maxtries):
-        solution = _tryToSolveW(clauses, vars, p)
+        solution = _tryToSolveW(formula, p)
         if solution is not None:
             return solution
 
 
-def _tryToSolveW(clauses, vars, p):
+def _tryToSolveW(formula, p):
+    clauses, vars = formula.clauses, formula.vars
     # compute random initial assignment
     assignment = sample(vars, randint(0, len(vars)))
-    cur = clause_eval(clauses, assignment)
+    cur = formula.clause_eval(assignment)
     while True:
         # reached a model for the formula, return it!
         if cur == len(clauses):
@@ -154,7 +171,7 @@ def _tryToSolveW(clauses, vars, p):
             # all possible value flips for variables
             for next in _nextAssignment(assignment, vars):
                 # evaluates the new assignment
-                v = clause_eval(clauses, next)
+                v = formula.clause_eval(next)
                 # if found, exit
                 if v == len(clauses):
                     return next
@@ -180,7 +197,7 @@ def _tryToSolveW(clauses, vars, p):
             else:
                 assignment.append(var)
             # store new value
-            cur = clause_eval(clauses, assignment)
+            cur = formula.clause_eval(assignment)
 
 
 def randomFormula(nvar=3, nclauses=5):
@@ -193,16 +210,15 @@ def randomFormula(nvar=3, nclauses=5):
         vars_c = sample(vars, randint(1, nvar))
         neg = sample(vars_c, randint(0, len(vars_c)))
         cl.add(Clause(vars_c, neg))
-    return vars, cl
+    return Formula(cl, vars)
 
 
-def build_clauses(expression, or_expr="[ V]",
+def build_formula(expression, or_expr="[ V]",
                   and_expr="\^", not_expr="[!\xac]"):
     """Build a sequence of clauses from the expression given, using
     the regex and_expr for dividing clauses, or_expr for getting
     the literals and not_expr for not symbols,
-    returns a sequence of the variables encountered and
-    the list of the clauses. Ignores parenthesis in expression."""
+    returns the formula. Ignores parenthesis in expression."""
     # removes parenthesis
     expression = re.sub("[)(]", "", expression)
     # variables encountered during processing (String -> Variable)
@@ -237,11 +253,20 @@ def build_clauses(expression, or_expr="[ V]",
             (negs if neg else pos).append(var)
     clauses.append(Clause(pos, negs))
     # returns the vars and the clauses
-    return list(vars.values()), clauses
+    return Formula(vars=list(vars.values()), clauses=clauses)
 
 
-def solveAndFormat(solver, cl, vars, maxtries=1000):
-    sol = solver(cl, vars, maxtries=maxtries)
+def _generateSubsets(vars):
+    yield frozenset()
+    for r in range(1, len(vars)):
+        for subset in it.combinations(vars, r):
+            yield frozenset(subset)
+    yield vars
+
+
+def _solveAndFormat(solver, formula, maxtries=1000):
+    vars = formula.vars
+    sol = solver(formula, maxtries=maxtries)
     if sol is None:
         return None
     else:
@@ -252,13 +277,13 @@ def solveAndFormat(solver, cl, vars, maxtries=1000):
 
 if __name__ == '__main__':
     maxtries = 5000
-    vars, cl = build_clauses("a ^ b V a ^ c V !b")
+    formula = build_formula("a ^ b V a ^ c V !b")
+    print(list(formula.models))
     # vars, cl = randomFormula(nvar=3, nclauses=12)
-    vars = sorted(vars)
-    print(" ^ ".join(map(str, cl)))
-    print("# vars:", len(vars))
-    print("# clauses:", len(cl))
+    print(" ^ ".join(map(str, formula.clauses)))
+    print("# vars:", len(formula.vars))
+    print("# clauses:", len(formula.clauses))
     print("WSAT")
-    print(solveAndFormat(wsat_solve, cl, vars, maxtries))
+    print(_solveAndFormat(wsat_solve, formula, maxtries))
     print("GSAT")
-    print(solveAndFormat(gsat_solve, cl, vars, maxtries))
+    print(_solveAndFormat(gsat_solve, formula, maxtries))
