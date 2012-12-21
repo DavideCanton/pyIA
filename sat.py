@@ -28,7 +28,9 @@ class Variable:
 
 
 class Formula:
-    def __init__(self, vars, clauses):
+    "Class representing a formula"
+    def __init__(self, vars, clauses=[]):
+        "Build a formula from vars list and clause list"
         self.vars = frozenset(vars)
         self.clauses = clauses
 
@@ -37,10 +39,12 @@ class Formula:
         return sum(c.satisfied(assignment) for c in self.clauses)
 
     def satisfied(self, assignment):
+        "Returns true iff all clauses are satisfied by assignment"
         return all(c.satisfied(assignment) for c in self.clauses)
 
     @property
     def models(self):
+        "Generator yielding all models for the formula"
         for assignment in _generateSubsets(self.vars):
             if self.satisfied(assignment):
                 yield assignment
@@ -96,7 +100,7 @@ class Clause:
 
 
 def gsat_solve(formula, maxtries=1000):
-    """Tries to solve a list of clauses with vars, resetting
+    """Tries to solve a formula, resetting
     at most maxtries times using GSAT (greedy SAT) heuristic algorithm."""
     for _ in range(maxtries):
         solution = _tryToSolveG(formula)
@@ -146,7 +150,7 @@ def _nextAssignment(assignment, vars):
 
 
 def wsat_solve(formula, maxtries=1000, p=.9):
-    """Tries to solve a list of clauses with vars, resetting
+    """Tries to solve a formula, resetting
     at most maxtries times with the WSAT (walking SAT) heuristic algorithm.
     The parameter p represent the probability of executing a GSAT iteration."""
     for _ in range(maxtries):
@@ -210,11 +214,11 @@ def randomFormula(nvar=3, nclauses=5):
         vars_c = sample(vars, randint(1, nvar))
         neg = sample(vars_c, randint(0, len(vars_c)))
         cl.add(Clause(vars_c, neg))
-    return Formula(cl, vars)
+    return Formula(vars=vars, clauses=cl)
 
 
-def build_formula(expression, or_expr="[ V]",
-                  and_expr="\^", not_expr="[!\xac]"):
+def build_formula(expression, or_expr="[ V|]",
+                  and_expr="[\^&]", not_expr="[!\xac]"):
     """Build a sequence of clauses from the expression given, using
     the regex and_expr for dividing clauses, or_expr for getting
     the literals and not_expr for not symbols,
@@ -257,10 +261,11 @@ def build_formula(expression, or_expr="[ V]",
 
 
 def _generateSubsets(vars):
-    yield frozenset()
+    vars = sorted(vars)
+    yield []
     for r in range(1, len(vars)):
         for subset in it.combinations(vars, r):
-            yield frozenset(subset)
+            yield list(subset)
     yield vars
 
 
