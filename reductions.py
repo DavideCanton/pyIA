@@ -1,4 +1,4 @@
-from sat import wsat_solve, build_formula
+from pyIA import sat, logic
 import itertools as it
 
 
@@ -11,7 +11,7 @@ def buildFormulaVC(edges):
 
 
 def buildFormulaClique(edges):
-    nodes = set(it.chain(*[(e[0], e[1]) for e in edges]))
+    nodes = set(it.chain(*edges))
     not_edges = [(a, b) for a, b in it.combinations(nodes, 2)
                  if (a, b) not in edges and (b, a) not in edges]
     formulas = (["\xac{0} V {0}".format(n) for n in nodes] +
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     edges = "ab|bc|bd|ae|be|ac|ce"
     edges = [tuple(e) for e in edges.split("|")]
     formulaS = buildFormulaIS(edges)
-    formula = build_formula(formulaS)
+    formula = logic.build_formula(formulaS)
     clauses, vars = formula.clauses, formula.vars
     print(" ^ ".join(map(str, clauses)))
 
@@ -34,5 +34,5 @@ if __name__ == '__main__':
         if ok(sol):
             print([var.name for var in sol])
             exit()
-        sol = wsat_solve(formula)
+        sol = sat.wsat_solve(formula)
     print("Nessuna soluzione trovata")

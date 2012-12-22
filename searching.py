@@ -76,6 +76,89 @@ def a_star(start, goal, h, gen_children, callback=None):
     return None, None, info
 
 
+def best_first(start, goal, h, gen_children, callback=None):
+    n = Node(start)
+    n.value = h(start)
+    L = [n]
+    visited = set()
+    info = Info()
+
+    while L:
+        if callback:
+            callback(L)
+
+        info.maxl = max(len(L), info.maxl)
+        info.nodes += 1
+
+        current = heapq.heappop(L)
+
+        if goal(current.content):
+            n = current
+            pc = []
+            while n:
+                pc.append(n.content)
+                n = n.parent
+            pc.reverse()
+            return pc, visited, info
+
+        if current.content in visited:
+            continue
+        visited.add(current.content)
+
+        for child in gen_children(current.content):
+            if child in visited:
+                continue
+            x = Node(child, current)
+            x.depth = current.depth + 1
+            x.value = h(child)
+            heapq.heappush(L, x)
+
+    return None, None, info
+
+
+def hill_climbing(start, goal, h, gen_children, callback=None):
+    n = Node(start)
+    n.value = h(start)
+    L = [n]
+    visited = set()
+    info = Info()
+
+    while L:
+        if callback:
+            callback(L)
+
+        info.maxl = max(len(L), info.maxl)
+        info.nodes += 1
+
+        current = L.pop()
+
+        if goal(current.content):
+            n = current
+            pc = []
+            while n:
+                pc.append(n.content)
+                n = n.parent
+            pc.reverse()
+            return pc, visited, info
+
+        if current.content in visited:
+            continue
+        visited.add(current.content)
+
+        sons = []
+        for child in gen_children(current.content):
+            if child in visited:
+                continue
+            x = Node(child, current)
+            x.depth = current.depth + 1
+            x.value = h(child)
+            sons.append(x)
+        sons.sort(reverse=True)
+        L.extend(sons)
+
+    return None, None, info
+
+
 def generic_search(start, is_goal, gen_children,
                    L, get_func, put_func, callback=None):
 

@@ -1,1 +1,1 @@
-__all__ = ["reductions", "sat", "searching"]
+__all__ = ["logic", "reductions", "sat", "searching"]
