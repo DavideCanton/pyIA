@@ -22,10 +22,12 @@ def buildFormulaClique(edges):
 if __name__ == '__main__':
     edges = "ab|bc|bd|ae|be|ac|ce"
     edges = [tuple(e) for e in edges.split("|")]
-    formulaS = buildFormulaIS(edges)
+    formulaS = buildFormulaVC(edges)
     formula = logic.build_formula(formulaS)
     clauses, vars = formula.clauses, formula.vars
     print(" ^ ".join(map(str, clauses)))
+    print(" ^ ".join(cl.imply_form for cl in clauses))
+    print(formula.is_horn)
 
     iterations = 1000
     sol = []

@@ -1,5 +1,7 @@
 from pyIA import logic
-from random import sample, randint, random, choice
+from random import random, choice, randint, sample
+
+__all__ = ["gsat_solve", "wsat_solve"]
 
 
 def gsat_solve(formula, maxtries=1000):
@@ -95,7 +97,7 @@ def _tryToSolveW(formula, p):
         else:
             # compute unsatisfied clauses
             cl = choice([cl for cl in clauses
-                         if not cl.satisfied(assignment)])
+                            if not cl.satisfied(assignment)])
             # choose a random element
             var = choice(list(cl.var_list))
             # flips value
@@ -107,25 +109,19 @@ def _tryToSolveW(formula, p):
             cur = formula.clause_eval(assignment)
 
 
-def _solveAndFormat(solver, formula, maxtries=1000):
-    vars = formula.vars
-    sol = solver(formula, maxtries=maxtries)
-    if sol is None:
-        return None
-    else:
-        not_ch = lambda x: "\xac" if x not in sol else ""
-        return (" ^ ".join("{}{}".format(not_ch(var), var.name)
-                           for var in vars))
-
-
 if __name__ == '__main__':
     maxtries = 5000
-    formula = logic.build_formula("a ^ b V a ^ c V !b")
-    # vars, cl = randomFormula(nvar=3, nclauses=12)
+    formula = logic.randomFormula(nvar=3, nclauses=12)
     print(" ^ ".join(map(str, formula.clauses)))
     print("# vars:", len(formula.vars))
     print("# clauses:", len(formula.clauses))
     print("WSAT")
-    print(_solveAndFormat(wsat_solve, formula, maxtries))
+    wmodel = set(wsat_solve(formula))
+    print(wmodel)
     print("GSAT")
-    print(_solveAndFormat(gsat_solve, formula, maxtries))
+    gmodel = set(gsat_solve(formula))
+    print(gmodel)
+    print("Horn formula?", ('yes' if formula.is_horn else 'no'))
+    print("Minimal model:", formula.minimal_model)
+    assert formula.minimal_model <= wmodel
+    assert formula.minimal_model <= gmodel

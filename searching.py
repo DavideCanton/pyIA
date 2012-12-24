@@ -1,10 +1,13 @@
-import heapq
+import heapq as hq
 from collections import deque
 from functools import total_ordering
 
+__all__ = ["Info", "a_star", "best_first", "breadth_first", "depth_first",
+           "generic_search", "hill_climbing", "ida_star",
+           "iterative_broadening", "iterative_deepening"]
 
 # infinite represented by -1
-INFINITE = -1
+INF = -1
 
 
 @total_ordering
@@ -50,7 +53,7 @@ def a_star(start, goal, h, gen_children, callback=None):
         info.maxl = max(len(L), info.maxl)
         info.nodes += 1
 
-        current = heapq.heappop(L)
+        current = hq.heappop(L)
 
         if goal(current.content):
             n = current
@@ -71,7 +74,7 @@ def a_star(start, goal, h, gen_children, callback=None):
             x = Node(child, current)
             x.depth = current.depth + 1
             x.value = h(child) + x.depth
-            heapq.heappush(L, x)
+            hq.heappush(L, x)
 
     return None, None, info
 
@@ -90,7 +93,7 @@ def best_first(start, goal, h, gen_children, callback=None):
         info.maxl = max(len(L), info.maxl)
         info.nodes += 1
 
-        current = heapq.heappop(L)
+        current = hq.heappop(L)
 
         if goal(current.content):
             n = current
@@ -111,7 +114,7 @@ def best_first(start, goal, h, gen_children, callback=None):
             x = Node(child, current)
             x.depth = current.depth + 1
             x.value = h(child)
-            heapq.heappush(L, x)
+            hq.heappush(L, x)
 
     return None, None, info
 
@@ -309,7 +312,7 @@ def ida_star(start, is_goal, h, gen_children, callback=None):
         n = Node(start)
         n.value = h(start)
         L = [n]
-        cp = INFINITE
+        cp = INF
         visited = {}
 
         if callback:
@@ -351,9 +354,9 @@ def ida_star(start, is_goal, h, gen_children, callback=None):
                 if x.value <= c:
                     L.append(x)
                 else:
-                    cp = x.value if cp == INFINITE else min(cp, x.value)
+                    cp = x.value if cp == INF else min(cp, x.value)
 
-        if cp == INFINITE:
+        if cp == INF:
             break
 
         c = cp
