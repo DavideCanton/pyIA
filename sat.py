@@ -116,12 +116,15 @@ if __name__ == '__main__':
     print("# vars:", len(formula.vars))
     print("# clauses:", len(formula.clauses))
     print("WSAT")
-    wmodel = set(wsat_solve(formula))
+    wmodel = wsat_solve(formula)
+    if wmodel is not None:
+        wmodel = set(wmodel)
     print(wmodel)
     print("GSAT")
-    gmodel = set(gsat_solve(formula))
+    gmodel = gsat_solve(formula)
+    if gmodel is not None:
+        gmodel = set(gmodel)
     print(gmodel)
     print("Horn formula?", ('yes' if formula.is_horn else 'no'))
-    print("Minimal model:", formula.minimal_model)
-    assert formula.minimal_model <= wmodel
-    assert formula.minimal_model <= gmodel
+    mmodel = formula.minimal_model
+    print("Minimal model:", mmodel)

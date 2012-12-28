@@ -63,7 +63,8 @@ class Formula:
         if self.is_horn:
             return self._hornsat()
         else:
-            return reduce(and_, map(set, self.models), set(self.vars))
+            min_model = reduce(and_, map(set, self.models), set(self.vars))
+            return min_model if self.satisfied(min_model) else None
 
     def _hornsat(self):
         var_link = defaultdict(list)
@@ -86,7 +87,7 @@ class Formula:
                     cl_list[i] = None
                 elif cl and l in cl.neg_list:
                     if not cl.pos_list and len(cl.neg_list) == 1:
-                        return set()
+                        return None
                     cl.neg_list.remove(l)
         return model
 
@@ -160,7 +161,10 @@ class Clause:
     def imply_form(self):
         head = Clause.or_sep.join(var.name for var in self.pos_list)
         tail = Clause.and_sep.join(var.name for var in self.neg_list)
-        return "(" + Clause.imply.join((tail, head)) + ")"
+        if tail:
+            return "(" + Clause.imply.join((tail, head)) + ")"
+        else:
+            return "(" + head + ")"
 
     def __eq__(self, cl):
         return (self.pos_list == cl.pos_list and
@@ -260,9 +264,12 @@ def build_formula(expression, or_expr="[ V|]",
     return Formula(vars=list(vars.values()), clauses=clauses)
 
 if __name__ == '__main__':
-    f = randomFormula(30, 100)
+    f = build_formula("a ^ !b")
     print(f)
     print(f.imply_form)
-    print(f.is_horn)
-    print(f.minimal_model)
-    print(list(f.models))
+    print("Is horn?", f.is_horn, sep="\t\t")
+    min_model = f.minimal_model
+    print("Minimum model:", min_model, sep="\t\t")
+    if min_model:
+        print("Is it a model?", f.satisfied(min_model), sep="\t\t")
+    print("List of Models:", list(f.models), sep="\t\t")
