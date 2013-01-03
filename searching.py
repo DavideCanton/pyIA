@@ -366,4 +366,4 @@ def ida_star(start, is_goal, h, gen_children, callback=None):
 
 if __name__ == '__main__':
     import dis
-    dis.dis(ida_star)
+    dis.dis(a_star)

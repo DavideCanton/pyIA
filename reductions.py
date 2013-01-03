@@ -23,7 +23,7 @@ if __name__ == '__main__':
     edges = "ab|bc|bd|ae|be|ac|ce"
     edges = [tuple(e) for e in edges.split("|")]
     formulaS = buildFormulaVC(edges)
-    formula = logic.build_formula(formulaS)
+    formula = logic.Parser().build_formula(formulaS)
     clauses, vars = formula.clauses, formula.vars
     print(" ^ ".join(map(str, clauses)))
     print(" ^ ".join(cl.imply_form for cl in clauses))
@@ -31,10 +31,13 @@ if __name__ == '__main__':
 
     iterations = 1000
     sol = []
-    ok = lambda sol: len(sol) >= 2
+    ok = lambda sol: True
     for _ in range(iterations):
+        if formula.is_horn:
+            sol = formula.minimal_model
+        else:
+            sol = sat.wsat_solve(formula)
         if ok(sol):
             print([var.name for var in sol])
             exit()
-        sol = sat.wsat_solve(formula)
     print("Nessuna soluzione trovata")

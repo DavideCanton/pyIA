@@ -3,9 +3,9 @@ from operator import and_
 import itertools as it
 from random import randint, choice, sample, random
 import re
-from collections import defaultdict
+from collections import defaultdict, deque
 
-__all__ = ["Clause", "Formula", "Variable", "build_formula",
+__all__ = ["Clause", "Formula", "Variable", "Parser",
            "randomFormula", "randomHornFormula"]
 
 
@@ -34,10 +34,10 @@ class Variable:
 
 class Formula:
     "Class representing a formula"
-    def __init__(self, vars, clauses=[]):
+    def __init__(self, vars, clauses=None):
         "Build a formula from vars list and clause list"
         self.vars = set(vars)
-        self.clauses = clauses
+        self.clauses = clauses if clauses is not None else []
 
     def clause_eval(self, assignment):
         "Returns the number of clauses satisfied by assignment"
@@ -48,11 +48,11 @@ class Formula:
         return all(c.satisfied(assignment) for c in self.clauses)
 
     def __str__(self):
-        return " ^ ".join(map(str, self.clauses))
+        return " ^ ".join("(" + str(cl) + ")" for cl in self.clauses)
 
     @property
     def imply_form(self):
-        return " ^ ".join(cl.imply_form for cl in self.clauses)
+        return " ^ ".join("(" + cl.imply_form + ")" for cl in self.clauses)
 
     @property
     def is_horn(self):
@@ -155,16 +155,16 @@ class Clause:
         else:
             # choose the one not empty
             s = sp or sn
-        return "(" + s + ")"
+        return s
 
     @property
     def imply_form(self):
         head = Clause.or_sep.join(var.name for var in self.pos_list)
         tail = Clause.and_sep.join(var.name for var in self.neg_list)
         if tail:
-            return "(" + Clause.imply.join((tail, head)) + ")"
+            return Clause.imply.join((tail, head))
         else:
-            return "(" + head + ")"
+            return head
 
     def __eq__(self, cl):
         return (self.pos_list == cl.pos_list and
@@ -221,50 +221,103 @@ def randomHornFormula(nvar=3, nclauses=5):
     return Formula(vars=vars, clauses=cl)
 
 
-def build_formula(expression, or_expr="[ V|]",
-                  and_expr="[\^&]", not_expr="[!\xac]"):
-    """Build a sequence of clauses from the expression given, using
-    the regex and_expr for dividing clauses, or_expr for getting
-    the literals and not_expr for not symbols,
-    returns the formula. Ignores parenthesis in expression."""
-    # removes parenthesis
-    expression = re.sub("[)(]", "", expression)
-    # variables encountered during processing (String -> Variable)
-    vars = {}
-    # clauses built
-    clauses = []
-    # positive variables of the current building clauses
-    pos = []
-    # negative variables of the current building clauses
-    negs = []
-    # splits tokens (dividing literals but leaving and symbols)
-    for token in filter(None, re.split(or_expr, expression)):
-        token = token.strip()
-        # if it's an and_token builds the clause
-        if re.match(and_expr, token):
-            clauses.append(Clause(pos, negs))
-            pos[:] = []
-            negs[:] = []
+class Parser:
+    OR, AND, NOT, VAR, EOF = "OR", "AND", "NOT", "VAR", "EOF"
+
+    def __init__(self, or_expr="[ V|]",
+                 and_expr="[\^&]", not_expr="[!\xac]"):
+        self.or_expr = re.compile(or_expr)
+        self.and_expr = re.compile(and_expr)
+        self.not_expr = re.compile(not_expr)
+        self.tokens = None
+        self.curVar = None
+        self.curToken = None
+
+    def _next(self, init=False, expression=""):
+        if init:
+            self.tokens = deque(expression.split())
+        if not self.tokens:
+            self.curToken = Parser.EOF
+            return
+        token = self.tokens.popleft()
+        if self.not_expr.match(token[0]):
+            v = token[1:]
+            self.tokens.appendleft(v)
+            self.curToken = Parser.NOT
+        elif self.or_expr.match(token):
+            self.curToken = Parser.OR
+        elif self.and_expr.match(token):
+            self.curToken = Parser.AND
         else:
-            # check if it's negative
-            neg = False
-            if re.match(not_expr, token[0]):
-                token = token[1:]
-                neg = True
-            # update dict
-            if token in vars:
-                var = vars[token]
+            self.curVar = token
+            self.curToken = Parser.VAR
+
+    def _ensure(self, token):
+        if self.curToken != token:
+            raise ValueError("Expected {}, got {}"
+                             .format(token, self.curToken))
+
+    def build_formula(self, expression):
+        # removes parenthesis
+        expression = re.sub("[)(]", "", expression)
+        # variables encountered during processing (String -> Variable)
+        vars = {}
+        # clauses built
+        clauses = []
+        # positive variables of the current building clauses
+        pos = []
+        # negative variables of the current building clauses
+        negs = []
+        self._next(True, expression)
+        self._formula(vars, clauses, pos, negs)
+        self._ensure(Parser.EOF)
+        return Formula(vars=list(vars.values()), clauses=clauses)
+
+    def _varn(self, vars, pos, negs):
+        if self.curToken == Parser.NOT:
+            self._next()
+            self._ensure(Parser.VAR)
+            vn = self.curVar
+            if vn in vars:
+                var = vars[vn]
             else:
-                var = Variable(token)
-                vars[token] = var
-            # appends the variable in the right list
-            (negs if neg else pos).append(var)
-    clauses.append(Clause(pos, negs))
-    # returns the formula
-    return Formula(vars=list(vars.values()), clauses=clauses)
+                var = Variable(vn)
+                vars[vn] = var
+            negs.append(var)
+            self._next()
+        elif self.curToken == Parser.VAR:
+            vn = self.curVar
+            if vn in vars:
+                var = vars[vn]
+            else:
+                var = Variable(vn)
+                vars[vn] = var
+            pos.append(var)
+            self._next()
+        else:
+            raise ValueError("Error in VARN")
+
+    def _clause(self, vars, clauses, pos, negs):
+        self._varn(vars, pos, negs)
+        while self.curToken == Parser.OR:
+            self._next()
+            self._varn(vars, pos, negs)
+        cl = Clause(pos, negs)
+        clauses.append(cl)
+        pos[:] = []
+        negs[:] = []
+
+    def _formula(self, vars, clauses, pos, negs):
+        self._clause(vars, clauses, pos, negs)
+        while self.curToken == Parser.AND:
+            self._next()
+            self._clause(vars, clauses, pos, negs)
+
 
 if __name__ == '__main__':
-    f = build_formula("a ^ !b")
+    f = Parser().build_formula("a V b ^ b V !a ^ c V !c")
+    for cl in f.clauses:
+        print(cl.imply_form + ".")
     print(f)
     print(f.imply_form)
     print("Is horn?", f.is_horn, sep="\t\t")
