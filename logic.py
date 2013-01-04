@@ -262,18 +262,12 @@ class Parser:
         expression = re.sub("[)(]", "", expression)
         # variables encountered during processing (String -> Variable)
         vars = {}
-        # clauses built
-        clauses = []
-        # positive variables of the current building clauses
-        pos = []
-        # negative variables of the current building clauses
-        negs = []
         self._next(True, expression)
-        self._formula(vars, clauses, pos, negs)
+        f = self._formula(vars)
         self._ensure(Parser.EOF)
-        return Formula(vars=list(vars.values()), clauses=clauses)
+        return f
 
-    def _varn(self, vars, pos, negs):
+    def _varn(self, vars):
         if self.curToken == Parser.NOT:
             self._next()
             self._ensure(Parser.VAR)
@@ -282,36 +276,38 @@ class Parser:
                 var = vars[vn]
             else:
                 var = Variable(vn)
-                vars[vn] = var
-            negs.append(var)
+                vars[vn] = var            
             self._next()
+            return var, False
         elif self.curToken == Parser.VAR:
             vn = self.curVar
             if vn in vars:
                 var = vars[vn]
             else:
                 var = Variable(vn)
-                vars[vn] = var
-            pos.append(var)
+                vars[vn] = var            
             self._next()
+            return var, True
         else:
             raise ValueError("Error in VARN")
 
-    def _clause(self, vars, clauses, pos, negs):
-        self._varn(vars, pos, negs)
+    def _clause(self, vars):
+        pos = []
+        negs = []
+        var, positive = self._varn(vars)
+        (pos if positive else negs).append(var)
         while self.curToken == Parser.OR:
             self._next()
-            self._varn(vars, pos, negs)
-        cl = Clause(pos, negs)
-        clauses.append(cl)
-        pos[:] = []
-        negs[:] = []
+            var, positive = self._varn(vars)
+            (pos if positive else negs).append(var)
+        return Clause(pos, negs)        
 
-    def _formula(self, vars, clauses, pos, negs):
-        self._clause(vars, clauses, pos, negs)
+    def _formula(self, vars):
+        clauses = [self._clause(vars)]
         while self.curToken == Parser.AND:
             self._next()
-            self._clause(vars, clauses, pos, negs)
+            clauses.append(self._clause(vars))
+        return Formula(vars=list(vars.values()), clauses=clauses)
 
 
 if __name__ == '__main__':
