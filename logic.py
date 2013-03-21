@@ -4,6 +4,7 @@ import itertools as it
 from random import randint, choice, sample, random
 import re
 from collections import defaultdict, deque
+import string
 
 __all__ = ["Clause", "Formula", "Variable", "Parser",
            "randomFormula", "randomHornFormula"]
@@ -11,7 +12,7 @@ __all__ = ["Clause", "Formula", "Variable", "Parser",
 
 @total_ordering
 class Variable:
-    "Class representing a variable"
+    """Class representing a variable"""
     # private id of every variable
     _id = 0
 
@@ -33,18 +34,19 @@ class Variable:
 
 
 class Formula:
-    "Class representing a formula"
+    """Class representing a formula"""
+
     def __init__(self, vars, clauses=None):
-        "Build a formula from vars list and clause list"
+        """Build a formula from vars list and clause list"""
         self.vars = set(vars)
         self.clauses = clauses if clauses is not None else []
 
     def clause_eval(self, assignment):
-        "Returns the number of clauses satisfied by assignment"
+        """Returns the number of clauses satisfied by assignment"""
         return sum(c.satisfied(assignment) for c in self.clauses)
 
     def satisfied(self, assignment):
-        "Returns true iff all clauses are satisfied by assignment"
+        """Returns true iff all clauses are satisfied by assignment"""
         return all(c.satisfied(assignment) for c in self.clauses)
 
     def __str__(self):
@@ -63,8 +65,7 @@ class Formula:
         if self.is_horn:
             return self._hornsat()
         else:
-            min_model = reduce(and_, map(set, self.models), set(self.vars))
-            return min_model if self.satisfied(min_model) else None
+            raise ValueError("Formula non-Horn")
 
     def _hornsat(self):
         var_link = defaultdict(list)
@@ -99,7 +100,7 @@ class Formula:
 
     @property
     def models(self):
-        "Generator yielding all models for the formula"
+        """Generator yielding all models for the formula"""
         for assignment in _generateSubsets(self.vars):
             if self.satisfied(assignment):
                 yield assignment
@@ -110,7 +111,7 @@ class Formula:
 
 
 class Clause:
-    "Class representing a disjunction of literals, a.k.a. clause"
+    """Class representing a disjunction of literals, a.k.a. clause"""
     # separator of clauses
     or_sep = " V "
     and_sep = " ^ "
@@ -126,7 +127,7 @@ class Clause:
 
     @property
     def var_list(self):
-        "Returns the set of the variables occurring in the clause"
+        """Returns the set of the variables occurring in the clause"""
         return self.pos_list | self.neg_list
 
     @property
@@ -145,10 +146,8 @@ class Clause:
         return False
 
     def __str__(self):
-        sp = Clause.or_sep.join(var.name
-                                for var in self.pos_list)
-        sn = Clause.or_sep.join("\xac" + var.name
-                                for var in self.neg_list)
+        sp = Clause.or_sep.join(var.name for var in self.pos_list)
+        sn = Clause.or_sep.join("\xac" + var.name for var in self.neg_list)
         if sp and sn:
             # join the two pieces
             s = Clause.or_sep.join((sp, sn))
@@ -190,7 +189,7 @@ def randomFormula(nvar=3, nclauses=5):
     """Creates a random formula with nvar variables and
     a number of clauses uniformally distributed in [1, nclauses]"""
     nclauses = randint(1, nclauses + 1)
-    vars = [Variable() for _ in range(nvar)]
+    vars = [Variable(l) for l, _ in zip(string.ascii_letters, range(nvar))]
     cl = []
     while len(cl) != nclauses:
         try:
@@ -206,14 +205,11 @@ def randomHornFormula(nvar=3, nclauses=5):
     """Creates a random Horn formula with nvar variables and
     a number of clauses uniformally distributed in [1, nclauses]"""
     nclauses = randint(1, nclauses + 1)
-    vars = [Variable() for _ in range(nvar)]
+    vars = [Variable(l) for l, _ in zip(string.ascii_letters, range(nvar))]
     cl = []
     while len(cl) != nclauses:
         try:
-            if random() < 0.5:
-                vars_c = [choice(vars)]
-            else:
-                vars_c = []
+            vars_c = [choice(vars)] if random() < 0.5 else []
             neg = sample(vars, randint(0, nvar))
             cl.append(Clause(vars_c, neg))
         except ValueError:
@@ -254,8 +250,8 @@ class Parser:
 
     def _ensure(self, token):
         if self.curToken != token:
-            raise ValueError("Expected {}, got {}"
-                             .format(token, self.curToken))
+            s = "Expected {}, got {}"
+            raise ValueError(s.format(token, self.curToken))
 
     def build_formula(self, expression):
         # removes parenthesis
@@ -276,7 +272,7 @@ class Parser:
                 var = vars[vn]
             else:
                 var = Variable(vn)
-                vars[vn] = var            
+                vars[vn] = var
             self._next()
             return var, False
         elif self.curToken == Parser.VAR:
@@ -285,7 +281,7 @@ class Parser:
                 var = vars[vn]
             else:
                 var = Variable(vn)
-                vars[vn] = var            
+                vars[vn] = var
             self._next()
             return var, True
         else:
@@ -300,7 +296,7 @@ class Parser:
             self._next()
             var, positive = self._varn(vars)
             (pos if positive else negs).append(var)
-        return Clause(pos, negs)        
+        return Clause(pos, negs)
 
     def _formula(self, vars):
         clauses = [self._clause(vars)]
@@ -311,7 +307,7 @@ class Parser:
 
 
 if __name__ == '__main__':
-    f = Parser().build_formula("a V b ^ b V !a ^ c V !c")
+    f = Parser().build_formula("a ^ b V !a ^ a V !c ^ d")
     for cl in f.clauses:
         print(cl.imply_form + ".")
     print(f)

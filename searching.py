@@ -1,10 +1,12 @@
 import heapq as hq
 from collections import deque
 from functools import total_ordering
+from math import exp
+from random import random, choice
 
 __all__ = ["Info", "a_star", "best_first", "breadth_first", "depth_first",
            "generic_search", "hill_climbing", "ida_star",
-           "iterative_broadening", "iterative_deepening"]
+           "iterative_broadening", "iterative_deepening", "simulated_annealing"]
 
 # infinite represented by -1
 INF = -1
@@ -39,10 +41,61 @@ class Info:
                 .format(self.maxl, self.nodes))
 
 
-def a_star(start, goal, h, gen_children, callback=None):
+def simulated_annealing(start, goal, h, gen_children, schedule, callback=None):
     n = Node(start)
     n.value = h(start)
     L = [n]
+    info = Info()
+    visited = set()
+    t = 1
+    current = n
+
+    while True:
+        print(L)
+        print(visited)
+
+        if callback:
+            callback(L)
+
+        if current.content in visited:
+            continue
+
+        T = schedule(t)
+        t += 1
+
+        info.maxl = max(len(L), info.maxl)
+        info.nodes += 1
+
+        if abs(T) < 1E-10 or goal(current.content):
+            n = current
+            pc = []
+            while n:
+                pc.append(n.content)
+                n = n.parent
+            pc.reverse()
+            return pc, None, info
+
+        sons = list(gen_children(current.content))
+        nc = choice(sons)
+        next = Node(nc)
+        next.value = h(nc)
+        next.depth = current.depth + 1
+        next.parent = current
+        delta = float(current.value - next.value)
+        if delta > 0 or random() < exp(delta / T):
+            visited.add(current.content)
+            current = next
+            L.append(next)
+
+    return None, None, info
+
+
+def a_star(start, goal, h, gen_children, dist=None, callback=None):
+    if dist is None:
+        dist = lambda x, y: 1
+    g = {start: 0}
+    c_from = {}
+    L = [(h(start), 0, start)]
     visited = set()
     info = Info()
 
@@ -53,28 +106,35 @@ def a_star(start, goal, h, gen_children, callback=None):
         info.maxl = max(len(L), info.maxl)
         info.nodes += 1
 
-        current = hq.heappop(L)
+        _, _, current = hq.heappop(L)
+        visited.add(current)
 
-        if goal(current.content):
+        if goal(current):
             n = current
             pc = []
-            while n:
-                pc.append(n.content)
-                n = n.parent
+            while n in c_from:
+                pc.append(n)
+                n = c_from[n]
             pc.reverse()
             return pc, visited, info
 
-        if current.content in visited:
-            continue
-        visited.add(current.content)
-
-        for child in gen_children(current.content):
+        for i, child in enumerate(gen_children(current)):
+            tg = g[current] + dist(current, child)
             if child in visited:
-                continue
-            x = Node(child, current)
-            x.depth = current.depth + 1
-            x.value = h(child) + x.depth
-            hq.heappush(L, x)
+                if tg >= g[child]:
+                    continue
+            not_in = True
+            for _, _, v in L:
+                if v == child:
+                    not_in = False
+                    break
+            if not_in or tg < g[child]:
+                c_from[child] = current
+                g[child] = tg
+                vh = h(child)
+                f = g[current] + vh
+                if not_in:
+                    hq.heappush(L, (f, vh + i, child))
 
     return None, None, info
 
@@ -112,8 +172,8 @@ def best_first(start, goal, h, gen_children, callback=None):
             if child in visited:
                 continue
             x = Node(child, current)
-            x.depth = current.depth + 1
             x.value = h(child)
+            x.depth = current.depth + 1
             hq.heappush(L, x)
 
     return None, None, info
@@ -164,7 +224,6 @@ def hill_climbing(start, goal, h, gen_children, callback=None):
 
 def generic_search(start, is_goal, gen_children,
                    L, get_func, put_func, callback=None):
-
     put_func(L, Node(start))
     info = Info()
     visited = set()
@@ -338,7 +397,6 @@ def ida_star(start, is_goal, h, gen_children, callback=None):
             visited[current.content] = current.value
 
             for child in gen_children(current.content):
-
                 x = Node(child, current)
                 x.depth = current.depth + 1
                 x.value = h(child) + x.depth
@@ -366,4 +424,5 @@ def ida_star(start, is_goal, h, gen_children, callback=None):
 
 if __name__ == '__main__':
     import dis
+
     dis.dis(a_star)

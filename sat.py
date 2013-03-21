@@ -111,20 +111,27 @@ def _tryToSolveW(formula, p):
 
 if __name__ == '__main__':
     maxtries = 5000
-    formula = logic.randomFormula(nvar=3, nclauses=12)
+    formula = logic.randomHornFormula(nvar=3, nclauses=5)
     print(" ^ ".join(map(str, formula.clauses)))
+    print(formula.imply_form)
     print("# vars:", len(formula.vars))
     print("# clauses:", len(formula.clauses))
     print("WSAT")
     wmodel = wsat_solve(formula)
     if wmodel is not None:
         wmodel = set(wmodel)
-    print(wmodel)
+        print(wmodel)
+        print(formula.satisfied(wmodel))
     print("GSAT")
     gmodel = gsat_solve(formula)
     if gmodel is not None:
         gmodel = set(gmodel)
-    print(gmodel)
+        print(gmodel)
+        print(formula.satisfied(gmodel))
     print("Horn formula?", ('yes' if formula.is_horn else 'no'))
     mmodel = formula.minimal_model
     print("Minimal model:", mmodel)
+    if wmodel is not None:
+        print(mmodel <= wmodel)
+    if gmodel is not None:
+        print(mmodel <= gmodel)
