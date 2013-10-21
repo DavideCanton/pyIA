@@ -185,38 +185,6 @@ def _generateSubsets(vars):
     yield vars
 
 
-def randomFormula(nvar=3, nclauses=5):
-    """Creates a random formula with nvar variables and
-    a number of clauses uniformally distributed in [1, nclauses]"""
-    nclauses = randint(1, nclauses + 1)
-    vars = [Variable(l) for l, _ in zip(string.ascii_letters, range(nvar))]
-    cl = []
-    while len(cl) != nclauses:
-        try:
-            vars_c = sample(vars, randint(0, nvar))
-            neg = sample(vars, randint(0, nvar))
-            cl.append(Clause(vars_c, neg))
-        except ValueError:
-            pass
-    return Formula(vars=vars, clauses=cl)
-
-
-def randomHornFormula(nvar=3, nclauses=5):
-    """Creates a random Horn formula with nvar variables and
-    a number of clauses uniformally distributed in [1, nclauses]"""
-    nclauses = randint(1, nclauses + 1)
-    vars = [Variable(l) for l, _ in zip(string.ascii_letters, range(nvar))]
-    cl = []
-    while len(cl) != nclauses:
-        try:
-            vars_c = [choice(vars)] if random() < 0.5 else []
-            neg = sample(vars, randint(0, nvar))
-            cl.append(Clause(vars_c, neg))
-        except ValueError:
-            pass
-    return Formula(vars=vars, clauses=cl)
-
-
 class Parser:
     OR, AND, NOT, VAR, EOF = "OR", "AND", "NOT", "VAR", "EOF"
 

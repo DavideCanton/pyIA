@@ -11,6 +11,7 @@ def gsat_solve(formula, maxtries=1000):
         solution = _tryToSolveG(formula)
         if solution is not None:
             return solution
+    return None
 
 
 def _tryToSolveG(formula):
@@ -62,6 +63,7 @@ def wsat_solve(formula, maxtries=1000, p=.9):
         solution = _tryToSolveW(formula, p)
         if solution is not None:
             return solution
+    return None
 
 
 def _tryToSolveW(formula, p):
