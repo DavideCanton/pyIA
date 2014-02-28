@@ -11,7 +11,6 @@ def gsat_solve(formula, maxtries=1000):
         solution = _tryToSolveG(formula)
         if solution is not None:
             return solution
-    return None
 
 
 def _tryToSolveG(formula):
@@ -63,7 +62,6 @@ def wsat_solve(formula, maxtries=1000, p=.9):
         solution = _tryToSolveW(formula, p)
         if solution is not None:
             return solution
-    return None
 
 
 def _tryToSolveW(formula, p):
@@ -114,7 +112,7 @@ def _tryToSolveW(formula, p):
 if __name__ == '__main__':
     maxtries = 5000
     formula = logic.randomHornFormula(nvar=3, nclauses=5)
-    print(" ^ ".join(map(str, formula.clauses)))
+    print(formula)
     print(formula.imply_form)
     print("# vars:", len(formula.vars))
     print("# clauses:", len(formula.clauses))

@@ -1,4 +1,4 @@
 pyIA
 ====
 
-Python 3.3 IA algorithms
+Python 3.2 IA algorithms

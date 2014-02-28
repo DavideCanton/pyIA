@@ -1,4 +1,5 @@
 import heapq as hq
+import numpy as np
 from collections import deque
 from functools import total_ordering
 from math import exp
@@ -42,23 +43,21 @@ class Info:
 
 
 def simulated_annealing(start, goal, h, gen_children, schedule, callback=None):
+    best = None
     n = Node(start)
     n.value = h(start)
     L = [n]
     info = Info()
     visited = set()
-    t = 1
+    t = 0
     current = n
 
     while True:
-        print(L)
-        print(visited)
-
         if callback:
             callback(L)
 
-        if current.content in visited:
-            continue
+        if best is None or current.value > best.value:
+            best = current
 
         T = schedule(t)
         t += 1
@@ -77,6 +76,8 @@ def simulated_annealing(start, goal, h, gen_children, schedule, callback=None):
 
         sons = list(gen_children(current.content))
         nc = choice(sons)
+        #while nc in visited:
+        #    nc = choice(sons)
         next = Node(nc)
         next.value = h(nc)
         next.depth = current.depth + 1
@@ -86,13 +87,14 @@ def simulated_annealing(start, goal, h, gen_children, schedule, callback=None):
             visited.add(current.content)
             current = next
             L.append(next)
+        elif delta < 0 and random() < 0.7:
+            current = best
+            t = 0
 
     return None, None, info
 
 
-def a_star(start, goal, h, gen_children, dist=None, callback=None):
-    if dist is None:
-        dist = lambda x, y: 1
+def a_star(start, goal, h, gen_children, callback=None):
     g = {start: 0}
     c_from = {}
     L = [(h(start), 0, start)]
@@ -118,16 +120,17 @@ def a_star(start, goal, h, gen_children, dist=None, callback=None):
             pc.reverse()
             return pc, visited, info
 
-        for i, child in enumerate(gen_children(current)):
-            tg = g[current] + dist(current, child)
+        for i, child in enumerate(gen_children(current, c_from.get(current))):
+            child, w = child
+            tg = g[current] + w
             if child in visited:
                 if tg >= g[child]:
                     continue
             not_in = True
-            for _, _, v in L:
-                if v == child:
-                    not_in = False
-                    break
+            #for _, _, v in L:
+            #    if v == child:
+            #        not_in = False
+            #        break
             if not_in or tg < g[child]:
                 c_from[child] = current
                 g[child] = tg
@@ -140,9 +143,8 @@ def a_star(start, goal, h, gen_children, dist=None, callback=None):
 
 
 def best_first(start, goal, h, gen_children, callback=None):
-    n = Node(start)
-    n.value = h(start)
-    L = [n]
+    c_from = {}
+    L = [(h(start), start)]
     visited = set()
     info = Info()
 
@@ -153,36 +155,32 @@ def best_first(start, goal, h, gen_children, callback=None):
         info.maxl = max(len(L), info.maxl)
         info.nodes += 1
 
-        current = hq.heappop(L)
+        _, current = hq.heappop(L)
+        visited.add(current)
 
-        if goal(current.content):
+        if goal(current):
             n = current
             pc = []
-            while n:
-                pc.append(n.content)
-                n = n.parent
+            while n in c_from:
+                pc.append(n)
+                n = c_from[n]
             pc.reverse()
             return pc, visited, info
 
-        if current.content in visited:
-            continue
-        visited.add(current.content)
-
-        for child in gen_children(current.content):
+        for i, child in enumerate(gen_children(current, c_from.get(current))):
+            child, w = child
             if child in visited:
                 continue
-            x = Node(child, current)
-            x.value = h(child)
-            x.depth = current.depth + 1
-            hq.heappush(L, x)
+            c_from[child] = current
+            vh = h(child)
+            hq.heappush(L, (vh, child))
 
     return None, None, info
 
 
 def hill_climbing(start, goal, h, gen_children, callback=None):
-    n = Node(start)
-    n.value = h(start)
-    L = [n]
+    c_from = {}
+    L = [(h(start), start)]
     visited = set()
     info = Info()
 
@@ -193,29 +191,26 @@ def hill_climbing(start, goal, h, gen_children, callback=None):
         info.maxl = max(len(L), info.maxl)
         info.nodes += 1
 
-        current = L.pop()
+        _, current = hq.heappop(L)
+        visited.add(current)
 
-        if goal(current.content):
+        if goal(current):
             n = current
             pc = []
-            while n:
-                pc.append(n.content)
-                n = n.parent
+            while n in c_from:
+                pc.append(n)
+                n = c_from[n]
             pc.reverse()
             return pc, visited, info
 
-        if current.content in visited:
-            continue
-        visited.add(current.content)
-
         sons = []
-        for child in gen_children(current.content):
+        for i, child in enumerate(gen_children(current, c_from.get(current))):
+            child, w = child
             if child in visited:
                 continue
-            x = Node(child, current)
-            x.depth = current.depth + 1
-            x.value = h(child)
-            sons.append(x)
+            c_from[child] = current
+            vh = h(child)
+            sons.append((vh, child))
         sons.sort(reverse=True)
         L.extend(sons)
 
@@ -256,15 +251,6 @@ def generic_search(start, is_goal, gen_children,
             put_func(L, x)
 
     return None, info
-
-
-class Reversed:
-    def __init__(self, gen):
-        self.gen = gen
-
-    def __call__(self, *a, **kw):
-        for el in reversed(list(self.gen(*a, **kw))):
-            yield el
 
 
 def depth_first(start, is_goal, gen_children, left=False, callback=None):
@@ -366,16 +352,17 @@ def iterative_broadening(start, is_goal, gen_children, bmax, callback=None):
 def ida_star(start, is_goal, h, gen_children, callback=None):
     c = 1
     info = Info()
+    c_from = {}
+    g = {start: 0}
 
     while True:
-        n = Node(start)
-        n.value = h(start)
+        n = h(start), start
         L = [n]
         cp = INF
         visited = {}
 
         if callback:
-            callback(L, reset=True)
+            callback(L)
 
         while L:
             if callback:
@@ -383,36 +370,36 @@ def ida_star(start, is_goal, h, gen_children, callback=None):
             info.maxl = max(len(L), info.maxl)
             info.nodes += 1
 
-            current = L.pop()
+            val, current = L.pop()
 
-            if is_goal(current.content):
+            if is_goal(current):
                 n = current
                 pc = []
-                while n:
-                    pc.append(n.content)
-                    n = n.parent
+                while n in c_from:
+                    pc.append(n)
+                    n = c_from[n]
                 pc.reverse()
-                return pc, set(visited.keys()), info
+                return pc, visited, info
 
-            visited[current.content] = current.value
+            visited[current] = val
 
-            for child in gen_children(current.content):
-                x = Node(child, current)
-                x.depth = current.depth + 1
-                x.value = h(child) + x.depth
+            for child in gen_children(current, c_from.get(current)):
+                child, w = child
+                g[child] = g[current] + w
+                x = h(child) + g[child], child
 
                 if child in visited:
-                    if x.value < visited[child]:
-                        visited[child] = x.value
+                    if x[0] < visited[child]:
+                        visited[child] = x[0]
                     else:
                         continue
                 else:
-                    visited[child] = x.value
+                    visited[child] = x[0]
 
-                if x.value <= c:
+                if x[0] <= c:
                     L.append(x)
                 else:
-                    cp = x.value if cp == INF else min(cp, x.value)
+                    cp = x[0] if cp == INF else min(cp, x[0])
 
         if cp == INF:
             break
