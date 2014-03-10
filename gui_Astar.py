@@ -1,5 +1,5 @@
 from pyIA.searching import *
-from labirinth import *
+from labyrinth import *
 from collections import defaultdict
 from PIL import Image, ImageTk
 from tkinter.tix import Tk
@@ -10,11 +10,11 @@ import threading
 import os
 import sys
 
-SCALE = 1
+SCALE = 2
 TIME = 0.
 LOAD_FUN = load_from_img
-NAME = "D:/labirinth/lab5.png"
-#NAME = "D:/labirinth/map/ost000a.map"
+NAME = "D:/labyrinth/lab4.bmp"
+#NAME = "D:/labyrinth/map/den000d.map"
 SQRT_2 = sqrt(2)
 
 
@@ -64,6 +64,7 @@ class GUI(Tk):
             L = []
         for n in L:
             *_, (i, j) = n
+            #i, j = n
             h = self.heur_goal((i, j))
             x = h / self.HMAX
             r = int(x * 255)
@@ -110,6 +111,8 @@ class GUI(Tk):
         if path:
             path = self.reconstruct_path(path)
 
+        print(path)
+
         print("Search ended")
         print("Time:", time)
         print("Nodes searched:", info.nodes)
@@ -128,9 +131,8 @@ class GUI(Tk):
                 self.gui_callback(None, path)
 
     def reconstruct_path(self, path):
-        expanded_path = [self.labirinth.start]
+        expanded_path = [self.labirinth.start, tuple(int(x) for x in path[0])]
         for a, b in zip(path, path[1:]):
-            expanded_path.append(tuple(int(x) for x in a))
             a = np.array(a)
             b = np.array(b)
             dir = b - a
