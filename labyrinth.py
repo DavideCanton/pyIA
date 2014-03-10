@@ -97,9 +97,7 @@ class NeighborsGeneratorPruning(NeighboursGeneratorDiag):
                 neighbors = self._pruneStraight(neighbors, current, move)
             act_neighbors = []
             for n in neighbors:
-                print("Called jump from", current, "towards", n - current)
                 n = self._jump(current, n - current, self.labyrinth.goal)
-                print("Returned", n)
                 if n is not None:
                     t = tuple(int(x) for x in n)
                     act_neighbors.append((t, dist_2(current, n)))
