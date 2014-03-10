@@ -5,6 +5,7 @@ from PIL import Image
 
 DIRS = U, L, D, R, UL, UR, DL, DR = [(0, -1), (-1, 0), (0, 1), (1, 0), (-1, -1),
                                      (1, -1), (-1, 1), (1, 1)]
+
 def dist_2(p1, p2):
     dx = p1[0] - p2[0]
     dy = p1[1] - p2[1]
@@ -96,7 +97,9 @@ class NeighborsGeneratorPruning(NeighboursGeneratorDiag):
                 neighbors = self._pruneStraight(neighbors, current, move)
             act_neighbors = []
             for n in neighbors:
-                n = self._jumpi(current, n - current, self.labyrinth.goal)
+                print("Called jump from", current, "towards", n - current)
+                n = self._jump(current, n - current, self.labyrinth.goal)
+                print("Returned", n)
                 if n is not None:
                     t = tuple(int(x) for x in n)
                     act_neighbors.append((t, dist_2(current, n)))
@@ -154,17 +157,13 @@ class NeighborsGeneratorPruning(NeighboursGeneratorDiag):
                     return next
         return self._jump(next, direction, goal)
 
-    def _jumpi(self, current, direction, goal, alive=MAX_ALIVE):
+    def _jumpi(self, current, direction, goal):
         retval = None
-        stack = [Snapshot(current, direction, goal, alive, None, None, 0)]
+        stack = [Snapshot(current, direction, goal, None, None, 0)]
 
         while stack:
             el = stack.pop()
             if el.stage == 0:
-                if el.alive == 0:
-                    retval = el.current
-                    continue
-                el.alive -= 1
                 next = el.current + el.direction
                 if not self.labyrinth[next] or next not in self.labyrinth:
                     retval = None
@@ -190,11 +189,11 @@ class NeighborsGeneratorPruning(NeighboursGeneratorDiag):
                     stack.append(el)
                     dirs = list(components(direction))
                     el.dirs = dirs
-                    snapshot = Snapshot(next, dirs[0], el.goal, MAX_ALIVE, next, dirs, 0)
+                    snapshot = Snapshot(next, dirs[0], el.goal, next, dirs, 0)
                     stack.append(snapshot)
                     continue
                 else:
-                    snapshot = Snapshot(next, el.direction, el.goal, el.alive, None, None, 0)
+                    snapshot = Snapshot(next, el.direction, el.goal, None, None, 0)
                     stack.append(snapshot)
                     continue
             elif el.stage == 1:
@@ -204,7 +203,7 @@ class NeighborsGeneratorPruning(NeighboursGeneratorDiag):
                     continue
                 el.stage = 2
                 stack.append(el)
-                snapshot = Snapshot(el.next, el.dirs[1], el.goal, MAX_ALIVE, el.next, el.dirs, 0)
+                snapshot = Snapshot(el.next, el.dirs[1], el.goal, el.next, el.dirs, 0)
                 stack.append(snapshot)
                 continue
             elif el.stage == 2:
@@ -212,18 +211,43 @@ class NeighborsGeneratorPruning(NeighboursGeneratorDiag):
                 if r2 is not None:
                     retval = el.next
                     continue
-                snapshot = Snapshot(el.next, el.direction, el.goal, el.alive, None, None, 0)
+                snapshot = Snapshot(el.next, el.direction, el.goal, None, None, 0)
                 stack.append(snapshot)
                 continue
         return retval
 
+    def _jumpi2(self, current, direction, goal):
+        stack = [(current, direction, goal)]
+        while stack:
+            current, direction, goal = stack.pop()
+            next = current + direction
+            if not self.labyrinth[next] or next not in self.labyrinth:
+                return None
+            if np.array_equal(next, goal):
+                return next  # assuming n cannot be None
+            isDiag = direction.all()
+            if isDiag:
+                if all(not self.labyrinth[current + dirs]
+                    for dirs in components(direction)):
+                    return None
+                forced = self.compute_forcedDiag(current, direction)
+            else:
+                forced = self.compute_forcedStraight(next, direction)
+            if any(self.labyrinth[f] for f in forced):
+                return next
+
+            if isDiag:
+                stack.extend((next, di, goal)
+                    for di in components(direction))
+            else:
+                stack.append((next, direction, goal))
+
 
 class Snapshot:
-    def __init__(self, current, direction, goal, alive, next, dirs, stage):
+    def __init__(self, current, direction, goal, next, dirs, stage):
         self.current = current
         self.direction = direction
         self.goal = goal
-        self.alive = alive
         self.next = next
         self.dirs = dirs
         self.stage = stage
@@ -232,7 +256,7 @@ class Snapshot:
         return str(self.__dict__)
 
 
-class labyrinth:
+class Labyrinth:
     def __init__(self, w, h):
         self.labyrinth = defaultdict(int)
         self.w = w
@@ -275,7 +299,7 @@ def load_from_img(imgpath):
     im = Image.open(imgpath)
     pix = im.load()
     h, w = im.size
-    labyrinth = labyrinth(w, h)
+    labyrinth = Labyrinth(w, h)
 
     for i in range(w):
         for j in range(h):
@@ -303,7 +327,7 @@ def load_from_map_file(filepath):
             elif line.startswith("width"):
                 h = int(line.split()[1])
             elif line.startswith("map"):
-                labyrinth = labyrinth(w, h)
+                labyrinth = Labyrinth(w, h)
                 map_started = True
             elif map_started:
                 for j, c in enumerate(line):
