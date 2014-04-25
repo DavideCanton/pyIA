@@ -1,25 +1,22 @@
 from tkinter.tix import Tk
 from tkinter.ttk import Button, Label
-from math import sqrt
+from PIL import Image, ImageTk
+from searching import a_star
+from labyrinth import NeighborsGenerator, heur_diag, \
+    load_from_img, load_from_map_file, normalize
 import time
 import threading
-
-from PIL import Image, ImageTk
+import itertools as it
 import numpy as np
-
-from searching import a_star
-from labyrinth import *
 
 
 # window scaling for small images
 SCALE = 1
 # time delay between each draw of the path
 PATH_DELAY_TIME = 0.
-# loading function
-LOAD_FUN = load_from_img
 # file path
-NAME = "D:/labyrinth/lab1.bmp"
-#NAME = "D:/labyrinth/map/ost000a.map"
+LAB_PATH = "D:/labyrinth/lab1.bmp"
+#LAB_PATH = "D:/labyrinth/map/ost000a.map"
 
 
 class GUI(Tk):
@@ -35,9 +32,12 @@ class GUI(Tk):
         """
         Loads the image from the file, using the appropriate function.
         """
-        imgpath = str(NAME)
-        print("Reading labyrinth from {}...".format(imgpath))
-        self.labyrinth, self.im = LOAD_FUN(imgpath)
+        print("Reading labyrinth from {}...".format(LAB_PATH))
+        if LAB_PATH.endswith("map"):
+            load_fun = load_from_map_file
+        else:
+            load_fun = load_from_img
+        self.labyrinth, self.im = load_fun(LAB_PATH)
         self.pix = self.im.load()
         print("Read!")
         self.b1.configure(state="normal")
@@ -101,7 +101,9 @@ class GUI(Tk):
         c_time = (time.perf_counter() - c_time)
 
         if path:
-            path = self.reconstruct_path(path)
+            path, cost = self.reconstruct_path(path)
+        else:
+            cost = float("inf")
 
         print(path)
 
@@ -109,6 +111,7 @@ class GUI(Tk):
         print("Time:", round(c_time, 2), "s")
         print("Nodes searched:", info.nodes)
         print("Maximum list size:", info.maxl)
+        print("Path cost:", cost)
 
         if path is None:
             print("Path not found")
@@ -132,15 +135,25 @@ class GUI(Tk):
         For example:
         [(0,0),(4,4)] -> [(0,0),(1,1),(2,2),(3,3),(4,4)].
         """
-        expanded_path = [self.labyrinth.start, tuple(int(x) for x in path[0])]
-        for cur_node, next_node in zip(path, path[1:]):
+
+        def pairwise(iterable):
+            a, b = it.tee(iterable)
+            next(b, None)
+            return zip(a, b)
+
+        cost = 0
+        expanded_path = [path[0]]
+        sqrt_2 = 2 ** 0.5
+        for cur_node, next_node in pairwise(path):
             cur_node = np.array(cur_node)
             next_node = np.array(next_node)
             direction = normalize(next_node - cur_node)
+            cost_unit = sqrt_2 if np.all(direction) else 1
             while not np.array_equal(cur_node, next_node):
                 cur_node = tuple(int(x) for x in cur_node + direction)
                 expanded_path.append(cur_node)
-        return expanded_path
+                cost += cost_unit
+        return expanded_path, cost
 
 
 if __name__ == '__main__':
