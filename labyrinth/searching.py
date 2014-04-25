@@ -1,33 +1,36 @@
 import heapq as hq
+from collections import namedtuple
 
 
-class Info:
-    def __init__(self, maxl=0, nodes=0):
-        self.maxl = maxl
-        self.nodes = nodes
-
-    def __repr__(self):
-        return ("Info[Max Length: {}, Nodes processed: {}]"
-                .format(self.maxl, self.nodes))
+Info = namedtuple("Info", "maxl nodes")
 
 
 def a_star(start, goal, h, gen_children, callback=None):
-    """A* algorithm, receives the start node, the goal node,
+    """
+    A* algorithm, receives the start node, the goal node,
     the heuristic function h(n), a callable generating node
-    successors and an optional callback."""
+    successors and an optional callback.
+
+    @param start: the start node
+    @param goal: the goal node
+    @param h: the heuristic function
+    @param gen_children: the generation callable
+    @param callback: a callback
+    @return: the optimum path from start to goal
+    """
 
     depth = {start: 0}
     parents = {}
     queue = [(h(start), 0, start)]
     visited = set()
-    info = Info()
+    info = Info(maxl=0, nodes=0)
 
     while queue:
         if callback:
             callback(queue)
 
-        info.maxl = max(len(queue), info.maxl)
-        info.nodes += 1
+        info = info._replace(maxl=max(len(queue), info.maxl),
+                             nodes=info.nodes + 1)
 
         current = hq.heappop(queue)[2]
         visited.add(current)
