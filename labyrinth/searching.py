@@ -41,14 +41,17 @@ def a_star(start, goal, h, gen_children, callback=None):
             while node in parents:
                 path.append(node)
                 node = parents[node]
+            path.append(start)
             path.reverse()
             return path, visited, info
 
         parent = parents.get(current)
+        #print("\nVisiting", current, "from", parent)
 
         for index, generated in enumerate(gen_children(current, parent)):
             successor, weight = generated
             successor_depth = depth[current] + weight
+            #print("Generated", generated, "Depth =", successor_depth)
             if successor not in visited or successor_depth < depth[successor]:
                 parents[successor] = current
                 depth[successor] = successor_depth
