@@ -1,17 +1,15 @@
-from searching import a_star
-from labyrinth import load_from_img, load_from_map_file,\
-    NeighborsGenerator, normalize
-from collections import defaultdict
-from PIL import Image, ImageTk
 from tkinter.tix import Tk
-from tkinter.ttk import Button, Label, Entry
+from tkinter.ttk import Button, Label
 from math import sqrt
-from datetime import datetime
 import time
 import threading
-import os
-import sys
+
+from PIL import Image, ImageTk
 import numpy as np
+
+from searching import a_star
+from labyrinth import *
+
 
 # window scaling for small images
 SCALE = 1
@@ -20,57 +18,8 @@ PATH_DELAY_TIME = 0.
 # loading function
 LOAD_FUN = load_from_img
 # file path
-NAME = "D:/labyrinth/lab4.bmp"
-#NAME = "D:/labyrinth/map/den000d.map"
-# cache of sqrt(2) value
-SQRT_2 = sqrt(2)
-
-
-def manhattan(goal, start):
-    """
-    Computes the Manhattan distance between the node and the goal.
-    Example:
-
-    | O |   |   |
-    |   |   |   |
-    |   |   | X |
-
-    The distance is 4, because the shortest paths between
-    (0,0) and (2,2) (like [(0,0)->(0,1)->(0,2)->(1,2)->(2,2)])
-    have a cost of 4.
-    """
-
-    def wrapper(node):
-        return (abs(node[0] - goal[0]) +
-                abs(node[1] - goal[1])) * 1.001  # break ties
-
-    return wrapper
-
-
-def heur_diag(goal, start):
-    """
-    Computes the minimum distance between the node
-    and the goal considering diagonal moves.
-
-    For example:
-
-    | O |   |   |   |
-    |   |   |   |   |
-    |   |   |   | X |
-
-    The distance is 2 * sqrt(2) + 1, because the shortest path between
-    (0,0) and (2,3) (like [(0,0)->(1,1)->(2,2)->(2,3)) has a cost of 4.
-    """
-
-    def wrapper(node):
-        dx = abs(node[0] - goal[0])
-        dy = abs(node[1] - goal[1])
-        m, M = dx, dy
-        if m > M:
-            m, M = M, m
-        return (m * (SQRT_2 - 1) + M) * 1.001  # break ties
-
-    return wrapper
+NAME = "D:/labyrinth/lab1.bmp"
+#NAME = "D:/labyrinth/map/ost000a.map"
 
 
 class GUI(Tk):
@@ -87,8 +36,8 @@ class GUI(Tk):
         Loads the image from the file, using the appropriate function.
         """
         imgpath = str(NAME)
-        print("Reading labirinth from {}...".format(imgpath))
-        self.labirinth, self.im = LOAD_FUN(imgpath)
+        print("Reading labyrinth from {}...".format(imgpath))
+        self.labyrinth, self.im = LOAD_FUN(imgpath)
         self.pix = self.im.load()
         print("Read!")
         self.b1.configure(state="normal")
@@ -116,7 +65,7 @@ class GUI(Tk):
         for node in path:
             i, j = node
             self.pix[j, i] = 0, 0, 255
-        self.pix[self.labirinth.start[1], self.labirinth.start[0]] = 255, 0, 0
+        self.pix[self.labyrinth.start[1], self.labyrinth.start[0]] = 255, 0, 0
         self.setImage(self.im)
 
     def start_alg(self):
@@ -131,25 +80,25 @@ class GUI(Tk):
         threading.Thread(target=self.compute).start()  # start the computation
 
     def compute(self):
-        if not self.labirinth.start or not self.labirinth.goal:
+        if not self.labyrinth.start or not self.labyrinth.goal:
             raise ValueError("Start or goal not found")
 
-        self.children_gen = NeighborsGenerator(self.labirinth)
+        self.children_gen = NeighborsGenerator(self.labyrinth)
         self.heur = heur_diag
-        self.heur_goal = self.heur(self.labirinth.goal, self.labirinth.start)
-        self.max_heur = int(self.heur_goal(self.labirinth.start))
+        self.heur_goal = self.heur(self.labyrinth.goal, self.labyrinth.start)
+        self.max_heur = int(self.heur_goal(self.labyrinth.start))
 
-        print("Start detected:\t{}".format(self.labirinth.start))
-        print("Goal detected:\t{}".format(self.labirinth.goal))
+        print("Start detected:\t{}".format(self.labyrinth.start))
+        print("Goal detected:\t{}".format(self.labyrinth.goal))
         print("Starting search...")
 
-        make_eq_func = lambda p1: lambda p2: p1 == p2
-        time = datetime.now()
-        path, *_, info = a_star(self.labirinth.start,
-                                make_eq_func(self.labirinth.goal),
+        eq_to_goal = lambda p: p == self.labyrinth.goal
+        c_time = time.perf_counter()
+        path, *_, info = a_star(self.labyrinth.start,
+                                eq_to_goal,
                                 self.heur_goal, self.children_gen,
                                 self.gui_callback)
-        time = (datetime.now() - time).microseconds / 1000
+        c_time = (time.perf_counter() - c_time)
 
         if path:
             path = self.reconstruct_path(path)
@@ -157,7 +106,7 @@ class GUI(Tk):
         print(path)
 
         print("Search ended")
-        print("Time:", time)
+        print("Time:", round(c_time, 2), "s")
         print("Nodes searched:", info.nodes)
         print("Maximum list size:", info.maxl)
 
@@ -183,14 +132,14 @@ class GUI(Tk):
         For example:
         [(0,0),(4,4)] -> [(0,0),(1,1),(2,2),(3,3),(4,4)].
         """
-        expanded_path = [self.labirinth.start, tuple(int(x) for x in path[0])]
-        for cur, next in zip(path, path[1:]):
-            cur = np.array(cur)
-            next = np.array(next)
-            dir = normalize(next - cur)
-            while not np.array_equal(cur, next):
-                cur = tuple(int(x) for x in cur + dir)
-                expanded_path.append(cur)
+        expanded_path = [self.labyrinth.start, tuple(int(x) for x in path[0])]
+        for cur_node, next_node in zip(path, path[1:]):
+            cur_node = np.array(cur_node)
+            next_node = np.array(next_node)
+            direction = normalize(next_node - cur_node)
+            while not np.array_equal(cur_node, next_node):
+                cur_node = tuple(int(x) for x in cur_node + direction)
+                expanded_path.append(cur_node)
         return expanded_path
 
 
