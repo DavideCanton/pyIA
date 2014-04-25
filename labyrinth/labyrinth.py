@@ -1,12 +1,61 @@
 from math import sqrt
+
 import numpy as np
-from collections import defaultdict
 from PIL import Image
+
 
 U, L, D, R, UL, UR, DL, DR = list(map(np.array, [(0, -1), (-1, 0), (0, 1),
                                                  (1, 0), (-1, -1), (1, -1),
                                                  (-1, 1), (1, 1)]))
+
 SQRT_2 = sqrt(2)
+
+
+def manhattan(goal, start):
+    """
+    Computes the Manhattan distance between the node and the goal.
+    Example:
+
+    | O |   |   |
+    |   |   |   |
+    |   |   | X |
+
+    The distance is 4, because the shortest paths between
+    (0,0) and (2,2) (like [(0,0)->(0,1)->(0,2)->(1,2)->(2,2)])
+    have a cost of 4.
+    """
+
+    def wrapper(node):
+        return (abs(node[0] - goal[0]) +
+                abs(node[1] - goal[1])) * 1.001  # break ties
+
+    return wrapper
+
+
+def heur_diag(goal, start):
+    """
+    Computes the minimum distance between the node
+    and the goal considering diagonal moves.
+
+    For example:
+
+    | O |   |   |   |
+    |   |   |   |   |
+    |   |   |   | X |
+
+    The distance is 2 * sqrt(2) + 1, because the shortest path between
+    (0,0) and (2,3) (like [(0,0)->(1,1)->(2,2)->(2,3)]) has a cost of 4.
+    """
+
+    def wrapper(node):
+        dx = abs(node[0] - goal[0])
+        dy = abs(node[1] - goal[1])
+        m, M = dx, dy
+        if m > M:
+            m, M = M, m
+        return (m * (SQRT_2 - 1) + M) * 1.001  # break ties
+
+    return wrapper
 
 
 def array_to_tuple(func):
@@ -29,21 +78,64 @@ class NeighborsGenerator:
     """
 
     def __init__(self, labyrinth):
+        """
+        Creates the labyrinth.
+        @param labyrinth: the labyrinth
+        @type labyrinth: Labyrinth
+        """
         self.labyrinth = labyrinth
 
     def up_free(self, x, y):
+        """
+        Checks if up_move can be done
+        @param x: the x coord
+        @type x: int
+        @param y: the y coord
+        @type y: int
+        @return: bool
+        """
         return y > 0 and self.labyrinth[x, y - 1]
 
     def down_free(self, x, y):
+        """
+        Checks if down_move can be done
+        @param x: the x coord
+        @type x: int
+        @param y: the y coord
+        @type y: int
+        @return: bool
+        """
         return y < self.labyrinth.h - 1 and self.labyrinth[x, y + 1]
 
     def left_free(self, x, y):
+        """
+        Checks if left can be done
+        @param x: the x coord
+        @type x: int
+        @param y: the y coord
+        @type y: int
+        @return: bool
+        """
         return x > 0 and self.labyrinth[x - 1, y]
 
     def right_free(self, x, y):
+        """
+        Checks if right_move can be done
+        @param x: the x coord
+        @type x: int
+        @param y: the y coord
+        @type y: int
+        @return: bool
+        """
         return x < self.labyrinth.w - 1 and self.labyrinth[x + 1, y]
 
     def natural_neighbors(self, pos):
+        """
+        Computes the natural neighbors of pos.
+        @param pos: the position.
+        @type pos: tuple[int]
+        @return: the list of natural neighbors of pos
+        """
         x, y = pos
         pos = np.array(pos)
         neighbors = []
@@ -61,19 +153,19 @@ class NeighborsGenerator:
             neighbors.append((R + pos, 1))
 
         if (self.up_free(x, y) and self.left_free(x, y - 1) or
-            self.left_free(x, y) and self.up_free(x - 1, y)):
+                    self.left_free(x, y) and self.up_free(x - 1, y)):
             neighbors.append((pos + UL, SQRT_2))
 
         if (self.up_free(x, y) and self.right_free(x, y - 1) or
-            self.right_free(x, y) and self.up_free(x + 1, y)):
+                    self.right_free(x, y) and self.up_free(x + 1, y)):
             neighbors.append((pos + UR, SQRT_2))
 
         if (self.down_free(x, y) and self.left_free(x, y + 1) or
-            self.left_free(x, y) and self.down_free(x - 1, y)):
+                    self.left_free(x, y) and self.down_free(x - 1, y)):
             neighbors.append((pos + DL, SQRT_2))
 
         if (self.down_free(x, y) and self.right_free(x, y + 1) or
-            self.right_free(x, y) and self.down_free(x + 1, y)):
+                    self.right_free(x, y) and self.down_free(x + 1, y)):
             neighbors.append((pos + DR, SQRT_2))
 
         return neighbors
@@ -83,6 +175,11 @@ class NeighborsGenerator:
         """
         Generates the neighbors of current, if coming from parent.
         If parent is None, then current is the start node.
+
+        @param current: the current position
+        @type current: tuple[int]
+        @param parent: the parent position
+        @type parent: tuple[int] | None
         """
         natural_neighbors = self.natural_neighbors(current)
 
@@ -126,12 +223,17 @@ class NeighborsGenerator:
         | 6 | 7 | 8 |
 
         If going in O from 4, 5 is a natural neighbor, 3 is a forced neighbor
+
+        @param node: the current node
+        @type node: np.array
+        @param move: the incoming move
+        @type move: np.array
         """
         pruned = []
-        for dir in orthogonal(move):
-            next = node + dir
-            if next in self.labyrinth and not self.labyrinth[next]:
-                pruned.append(next + move)
+        for direction in orthogonal(move):
+            next_node = node + direction
+            if next_node in self.labyrinth and not self.labyrinth[next_node]:
+                pruned.append(next_node + move)
         return pruned
 
     def compute_forced_diag(self, node, move):
@@ -146,9 +248,9 @@ class NeighborsGenerator:
         """
         pruned = []
         for comp in components(move):
-            next = node + comp
-            if next in self.labyrinth and not self.labyrinth[next]:
-                pruned.append(next + comp)
+            next_node = node + comp
+            if next_node in self.labyrinth and not self.labyrinth[next_node]:
+                pruned.append(next_node + comp)
         return pruned
 
     def prune_straight(self, neighbors, node, move):
@@ -160,7 +262,7 @@ class NeighborsGenerator:
         pruned_list.extend(self.compute_forced_straight(node, move))
         return [node for node in pruned_list
                 if any(np.array_equal(node, neighbor)
-            for neighbor in neighbors)]
+                       for neighbor in neighbors)]
 
     def prune_diag(self, neighbors, node, move):
         """
@@ -172,34 +274,34 @@ class NeighborsGenerator:
         pruned_list.extend(self.compute_forced_diag(node - move, move))
         return [node for node in pruned_list
                 if any(np.array_equal(node, neighbor)
-            for neighbor in neighbors)]
+                       for neighbor in neighbors)]
 
     def jump_rec(self, current, direction, goal):
         """
         Recursive jump function
         """
-        next = current + direction
-        if not self.labyrinth[next] or next not in self.labyrinth:
+        next_node = current + direction
+        if next_node not in self.labyrinth or not self.labyrinth[next_node]:
             return None
-        if np.array_equal(next, goal):
-            return next
+        if np.array_equal(next_node, goal):
+            return next_node
         isDiag = direction.all()
         if isDiag:
             if all(not self.labyrinth[current + dirs]
-                for dirs in components(direction)):
+                   for dirs in components(direction)):
                 return None
             forced = self.compute_forced_diag(current, direction)
         else:
-            forced = self.compute_forced_straight(next, direction)
+            forced = self.compute_forced_straight(next_node, direction)
 
-        if any(self.labyrinth[f] for f in forced):
-            return next
+        if any(self.labyrinth[f] for f in forced if f in self.labyrinth):
+            return next_node
 
         if isDiag:
             for dirt in components(direction):
-                if self.jump_rec(next, dirt, goal) is not None:
-                    return next
-        return self.jump_rec(next, direction, goal)
+                if self.jump_rec(next_node, dirt, goal) is not None:
+                    return next_node
+        return self.jump_rec(next_node, direction, goal)
 
     def jump_it_1(self, current, direction, goal):
         """
@@ -211,36 +313,36 @@ class NeighborsGenerator:
         while stack:
             el = stack.pop()
             if el.stage == 0:
-                next = el.current + el.direction
-                if not self.labyrinth[next] or next not in self.labyrinth:
+                next_node = el.current + el.direction
+                if next_node not in self.labyrinth or not self.labyrinth[next_node]:
                     retval = None
                     continue
-                if np.array_equal(next, el.goal):
-                    retval = next
+                if np.array_equal(next_node, el.goal):
+                    retval = next_node
                     continue
                 isDiag = el.direction.all()
                 if isDiag:
                     if all(not self.labyrinth[el.current + dirs]
-                        for dirs in components(direction)):
+                           for dirs in components(direction)):
                         retval = None
                         continue
                     forced = self.compute_forced_diag(el.current, el.direction)
                 else:
-                    forced = self.compute_forced_straight(next, el.direction)
-                if any(self.labyrinth[f] for f in forced):
-                    retval = next
+                    forced = self.compute_forced_straight(next_node, el.direction)
+                if any(self.labyrinth[f] for f in forced if f in self.labyrinth):
+                    retval = next_node
                     continue
                 if isDiag:
                     el.stage = 1
-                    el.next = next
+                    el.next = next_node
                     stack.append(el)
                     dirs = list(components(direction))
                     el.dirs = dirs
-                    snapshot = Snapshot(next, dirs[0], el.goal, next, dirs, 0)
+                    snapshot = Snapshot(next_node, dirs[0], el.goal, next_node, dirs, 0)
                     stack.append(snapshot)
                     continue
                 else:
-                    snapshot = Snapshot(next, el.direction,
+                    snapshot = Snapshot(next_node, el.direction,
                                         el.goal, None, None, 0)
                     stack.append(snapshot)
                     continue
@@ -273,27 +375,27 @@ class NeighborsGenerator:
         stack = [(current, direction, goal)]
         while stack:
             current, direction, goal = stack.pop()
-            next = current + direction
-            if not self.labyrinth[next] or next not in self.labyrinth:
+            next_node = current + direction
+            if next_node not in self.labyrinth or not self.labyrinth[next_node]:
                 return None
-            if np.array_equal(next, goal):
-                return next  # assuming n cannot be None
+            if np.array_equal(next_node, goal):
+                return next_node  # assuming n cannot be None
             isDiag = direction.all()
             if isDiag:
                 if all(not self.labyrinth[current + dirs]
-                    for dirs in components(direction)):
+                       for dirs in components(direction)):
                     return None
                 forced = self.compute_forced_diag(current, direction)
             else:
-                forced = self.compute_forced_straight(next, direction)
-            if any(self.labyrinth[f] for f in forced):
-                return next
+                forced = self.compute_forced_straight(next_node, direction)
+            if any(self.labyrinth[f] for f in forced if f in self.labyrinth):
+                return next_node
 
             if isDiag:
-                stack.extend((next, di, goal)
-                    for di in components(direction))
+                stack.extend((next_node, di, goal)
+                             for di in components(direction))
             else:
-                stack.append((next, direction, goal))
+                stack.append((next_node, direction, goal))
 
 
 class Snapshot:
@@ -321,14 +423,16 @@ class Labyrinth:
     """
 
     def __init__(self, w, h):
-        self.labyrinth = defaultdict(int)
+        self.walls = set()
         self.w = w
         self.h = h
         self.start = None
         self.goal = None
 
     def __getitem__(self, item):
-        return self.labyrinth[tuple(item)]
+        if item not in self:
+            raise ValueError("{} not contained in labyrinth".format(item))
+        return int(tuple(item) not in self.walls)
 
     def __contains__(self, pos):
         """
@@ -337,7 +441,13 @@ class Labyrinth:
         return 0 <= pos[0] < self.w and 0 <= pos[1] < self.h
 
     def __setitem__(self, key, value):
-        self.labyrinth[tuple(key)] = value
+        if key not in self:
+            raise ValueError("{} not contained in labyrinth".format(key))
+        key = tuple(key)
+        if value:
+            self.walls.discard(key)
+        else:
+            self.walls.add(key)
 
 
 def orthogonal(v):
@@ -368,42 +478,16 @@ def components(v):
 def normalize(v):
     """
     Scales the vector v such that every element is 1,0,-1.
-    >>> normalize([2,2])
+    >>> import numpy as np
+    >>> normalize(np.array([2,2]))
     [1,1]
-    >>> normalize([3,0])
+    >>> normalize(np.array([3,0]))
     [1,0]
     """
     return v / abs(v[v != 0][0])
 
 
-def load_from_img(imgpath):
-    """
-    Loads a labyrinth object from an image.
-    A red pixel is interpreted as the start point, a green one as the goal.
-    Black pixels represents obstacles, while white ones are free ground.
-    """
-    im = Image.open(imgpath)
-    pix = im.load()
-    h, w = im.size
-    labyrinth = Labyrinth(w, h)
-
-    for i in range(w):
-        for j in range(h):
-            #avoid alpha
-            pixel = pix[j, i][:3]
-            if pixel == (255, 255, 255):
-                labyrinth[i, j] = 1
-            elif pixel == (255, 0, 0):
-                labyrinth[i, j] = 1
-                labyrinth.start = i, j
-            elif pixel == (0, 255, 0):
-                labyrinth[i, j] = 1
-                labyrinth.goal = i, j
-
-    return labyrinth, im
-
-
-def load_from_map_file(filepath):
+def load_from_map_file(filepath, img=True):
     """
     Loads a labyrinth object from a map file.
     """
@@ -432,7 +516,36 @@ def load_from_map_file(filepath):
                         labyrinth[i, j] = 0
                 i += 1
 
-    im = lab_to_im(labyrinth)
+    im = lab_to_im(labyrinth) if img else None
+    return labyrinth, im
+
+
+def load_from_img(imgpath):
+    """
+    Loads a labyrinth object from an image.
+    A red pixel is interpreted as the start point, a green one as the goal.
+    Black pixels represents obstacles, while white ones are free ground.
+    """
+    im = Image.open(imgpath)
+    pix = im.load()
+    h, w = im.size
+    labyrinth = Labyrinth(w, h)
+
+    for i in range(w):
+        for j in range(h):
+            #avoid alpha
+            pixel = pix[j, i][:3]
+            if pixel == (255, 255, 255):
+                labyrinth[i, j] = 1
+            elif pixel == (255, 0, 0):
+                labyrinth[i, j] = 1
+                labyrinth.start = i, j
+            elif pixel == (0, 255, 0):
+                labyrinth[i, j] = 1
+                labyrinth.goal = i, j
+            else:
+                labyrinth[i, j] = 0
+
     return labyrinth, im
 
 
