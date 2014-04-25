@@ -1,13 +1,20 @@
-__author__ = 'Kami'
+__author__ = 'davide'
 
 import labyrinth as lab_module
 import numpy as np
 import searching
 import time
+import itertools as it
 
 # file path
 LAB_PATH = "D:/labyrinth/lab2.bmp"
 #LAB_PATH = "D:/labyrinth/map/ost000a.map"
+
+
+def pairwise(iterable):
+    a, b = it.tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 
 def reconstruct_path(path, labyrinth):
@@ -19,8 +26,8 @@ def reconstruct_path(path, labyrinth):
     For example:
     [(0,0),(4,4)] -> [(0,0),(1,1),(2,2),(3,3),(4,4)].
     """
-    expanded_path = [labyrinth.start, tuple(int(x) for x in path[0])]
-    for cur_node, next_node in zip(path, path[1:]):
+    expanded_path = [path[0]]
+    for cur_node, next_node in pairwise(path):
         cur_node = np.array(cur_node)
         next_node = np.array(next_node)
         direction = lab_module.normalize(next_node - cur_node)
