@@ -1,4 +1,4 @@
-from pyIA2 import sat, logic
+import sat, logic
 import itertools as it
 
 

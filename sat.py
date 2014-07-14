@@ -1,4 +1,4 @@
-from pyIA2 import logic
+import logic
 from random import random, choice, randint, sample
 
 __all__ = ["gsat_solve", "wsat_solve"]
