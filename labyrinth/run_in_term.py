@@ -1,4 +1,4 @@
-__author__ = 'davide'
+__author__ = 'Kami'
 
 import labyrinth as lab_module
 import numpy as np

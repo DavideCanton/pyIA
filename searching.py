@@ -98,6 +98,7 @@ def a_star(start, goal, h, gen_children, callback=None):
     g = {start: 0}
     c_from = {}
     L = [(h(start), 0, start)]
+
     visited = set()
     info = Info()
 
@@ -108,7 +109,7 @@ def a_star(start, goal, h, gen_children, callback=None):
         info.maxl = max(len(L), info.maxl)
         info.nodes += 1
 
-        _, _, current = hq.heappop(L)
+        current = hq.heappop(L)[2]
         visited.add(current)
 
         if goal(current):
@@ -126,18 +127,12 @@ def a_star(start, goal, h, gen_children, callback=None):
             if child in visited:
                 if tg >= g[child]:
                     continue
-            not_in = True
-            #for _, _, v in L:
-            #    if v == child:
-            #        not_in = False
-            #        break
-            if not_in or tg < g[child]:
+            if child not in g or tg < g[child]:
                 c_from[child] = current
                 g[child] = tg
                 vh = h(child)
                 f = g[current] + vh
-                if not_in:
-                    hq.heappush(L, (f, vh + i, child))
+                hq.heappush(L, (f, vh + i, child))
 
     return None, None, info
 
@@ -407,9 +402,3 @@ def ida_star(start, is_goal, h, gen_children, callback=None):
         c = cp
 
     return None, None, info
-
-
-if __name__ == '__main__':
-    import dis
-
-    dis.dis(a_star)

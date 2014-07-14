@@ -11,7 +11,7 @@ U, L, D, R, UL, UR, DL, DR = list(map(np.array, [(0, -1), (-1, 0), (0, 1),
 SQRT_2 = sqrt(2)
 
 
-def manhattan(goal, start):
+def manhattan(goal, _):
     """
     Computes the Manhattan distance between the node and the goal.
     Example:
@@ -32,7 +32,7 @@ def manhattan(goal, start):
     return wrapper
 
 
-def heur_diag(goal, start):
+def heur_diag(goal, _):
     """
     Computes the minimum distance between the node
     and the goal considering diagonal moves.
@@ -70,9 +70,7 @@ class NeighborsGenerator:
     """
     Generates moves towards the 8 directions.
     __call__ method yields a tuple (n,w), n is the successor
-    node, w is the weight of the move. Uses the JPS
-    (Jump Point Search) in order to make the successor generation
-    smarter and pruning the search graph.
+    node, w is the weight of the move.
     A straight move costs 1 unit, while a diagonal one costs
     sqrt(2) units.
     """
@@ -152,23 +150,43 @@ class NeighborsGenerator:
         if self.right_free(x, y):
             neighbors.append((R + pos, 1))
 
-        if (self.up_free(x, y) and self.left_free(x, y - 1) or
-                    self.left_free(x, y) and self.up_free(x - 1, y)):
+        if self.up_free(x, y) and self.left_free(x, y - 1) or self.left_free(x, y) and self.up_free(x - 1, y):
             neighbors.append((pos + UL, SQRT_2))
 
-        if (self.up_free(x, y) and self.right_free(x, y - 1) or
-                    self.right_free(x, y) and self.up_free(x + 1, y)):
+        if self.up_free(x, y) and self.right_free(x, y - 1) or self.right_free(x, y) and self.up_free(x + 1, y):
             neighbors.append((pos + UR, SQRT_2))
 
-        if (self.down_free(x, y) and self.left_free(x, y + 1) or
-                    self.left_free(x, y) and self.down_free(x - 1, y)):
+        if self.down_free(x, y) and self.left_free(x, y + 1) or self.left_free(x, y) and self.down_free(x - 1, y):
             neighbors.append((pos + DL, SQRT_2))
 
-        if (self.down_free(x, y) and self.right_free(x, y + 1) or
-                    self.right_free(x, y) and self.down_free(x + 1, y)):
+        if self.down_free(x, y) and self.right_free(x, y + 1) or self.right_free(x, y) and self.down_free(x + 1, y):
             neighbors.append((pos + DR, SQRT_2))
 
         return neighbors
+
+    @array_to_tuple
+    def __call__(self, current, parent=None):
+        return self.natural_neighbors(current)
+
+
+class NeighborsGeneratorJPS(NeighborsGenerator):
+    """
+    Generates moves towards the 8 directions.
+    __call__ method yields a tuple (n,w), n is the successor
+    node, w is the weight of the move. Uses the JPS
+    (Jump Point Search) in order to make the successor generation
+    smarter and pruning the search graph.
+    A straight move costs 1 unit, while a diagonal one costs
+    sqrt(2) units.
+    """
+
+    def __init__(self, labyrinth):
+        """
+        Creates the labyrinth.
+        @param labyrinth: the labyrinth
+        @type labyrinth: Labyrinth
+        """
+        super().__init__(labyrinth)
 
     @array_to_tuple
     def __call__(self, current, parent=None):
@@ -188,7 +206,7 @@ class NeighborsGenerator:
             return natural_neighbors
 
         else:
-            #map tuples to numpy arrays
+            # map tuples to numpy arrays
             current = np.array(current)
             natural_neighbors = [np.array(node[0])
                                  for node in natural_neighbors]
@@ -269,7 +287,7 @@ class NeighborsGenerator:
         Returns the valid neighbors of node towards move, i.e.
         diagonal natural neighbors + diagonal forced neighbors
         """
-        pruned_list = [node + dir for dir in components(move)]
+        pruned_list = [node + dir_ for dir_ in components(move)]
         pruned_list.append(node + move)
         pruned_list.extend(self.compute_forced_diag(node - move, move))
         return [node for node in pruned_list
@@ -403,11 +421,11 @@ class Snapshot:
     This class models a snapshot of the local stack when jump_it_1 is called.
     """
 
-    def __init__(self, current, direction, goal, next, dirs, stage):
+    def __init__(self, current, direction, goal, next_, dirs, stage):
         self.current = current
         self.direction = direction
         self.goal = goal
-        self.next = next
+        self.next = next_
         self.dirs = dirs
         self.stage = stage
 
@@ -458,8 +476,7 @@ def orthogonal(v):
     >>> orthogonal(np.array([1,0]))
     [array([0, 1]), array([ 0, -1])]
     """
-    v = v.copy()
-    v[[0, 1]] = v[[1, 0]]
+    v = v[::-1].copy()
     return [v, -v]
 
 
@@ -508,10 +525,10 @@ def load_from_map_file(filepath, img=True):
                         labyrinth[i, j] = 1
                     elif c == "X":
                         labyrinth[i, j] = 1
-                        labyrinth.start = ((i, j))
+                        labyrinth.start = (i, j)
                     elif c == "Y":
                         labyrinth[i, j] = 1
-                        labyrinth.goal = ((i, j))
+                        labyrinth.goal = (i, j)
                     else:
                         labyrinth[i, j] = 0
                 i += 1
@@ -533,7 +550,7 @@ def load_from_img(imgpath):
 
     for i in range(w):
         for j in range(h):
-            #avoid alpha
+            # avoid alpha
             pixel = pix[j, i][:3]
             if pixel == (255, 255, 255):
                 labyrinth[i, j] = 1
@@ -568,7 +585,7 @@ def lab_to_im(labyrinth):
 
 if __name__ == "__main__":
     imgpath = r"D:\labyrinth\lab4.bmp"
-    #imgpath = r"D:\labyrinth\map\arena.map"
+    # imgpath = r"D:\labyrinth\map\arena.map"
     print("Reading labyrinth from {}...".format(imgpath))
     labyrinth, _ = load_from_img(imgpath)
     print("Read")

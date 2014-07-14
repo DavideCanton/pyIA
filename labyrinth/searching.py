@@ -21,8 +21,9 @@ def a_star(start, goal, h, gen_children, callback=None):
 
     depth = {start: 0}
     parents = {}
-    queue = [(h(start), 0, start)]
+    queue = [(h(start), start)]
     visited = set()
+    INF = float("inf")
     info = Info(maxl=0, nodes=0)
 
     while queue:
@@ -32,7 +33,7 @@ def a_star(start, goal, h, gen_children, callback=None):
         info = info._replace(maxl=max(len(queue), info.maxl),
                              nodes=info.nodes + 1)
 
-        current = hq.heappop(queue)[2]
+        current = hq.heappop(queue)[1]
         visited.add(current)
 
         if goal(current):
@@ -48,15 +49,19 @@ def a_star(start, goal, h, gen_children, callback=None):
         parent = parents.get(current)
         #print("\nVisiting", current, "from", parent)
 
-        for index, generated in enumerate(gen_children(current, parent)):
+        for generated in gen_children(current, parent):
             successor, weight = generated
             successor_depth = depth[current] + weight
             #print("Generated", generated, "Depth =", successor_depth)
-            if successor not in visited or successor_depth < depth[successor]:
+            if successor in visited:
+                continue
+            if successor_depth < depth.get(successor, INF):
                 parents[successor] = current
                 depth[successor] = successor_depth
                 h_score = h(successor)
-                f_score = depth[current] + h_score
-                hq.heappush(queue, (f_score, h_score + index, successor))
+                f_score = successor_depth + h_score
+                #print("h-score of", successor, "=", h_score)
+                #print("Added", successor, "to queue with score", f_score)
+                hq.heappush(queue, (f_score, successor))
 
     return None, None, info

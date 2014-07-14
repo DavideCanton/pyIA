@@ -1,4 +1,4 @@
-from pyIA import logic
+from pyIA2 import logic
 from random import random, choice, randint, sample
 
 __all__ = ["gsat_solve", "wsat_solve"]
@@ -14,9 +14,9 @@ def gsat_solve(formula, maxtries=1000):
 
 
 def _tryToSolveG(formula):
-    clauses, vars = formula.clauses, formula.vars
+    clauses, vars_ = formula.clauses, formula.vars
     # compute random initial assignment
-    assignment = sample(vars, randint(0, len(vars)))
+    assignment = sample(vars_, randint(0, len(vars_)))
     cur = formula.clause_eval(assignment)
     while True:
         # if reached a model, returns it
@@ -25,15 +25,15 @@ def _tryToSolveG(formula):
         max_v = 0
         next_best = None
         # all possible value flips for variables
-        for next in _nextAssignment(assignment, vars):
+        for next_ in _nextAssignment(assignment, vars_):
             # evaluates the new assignment
-            v = formula.clause_eval(next)
+            v = formula.clause_eval(next_)
             # if found, exit
             if v == len(clauses):
-                return next
+                return next_
             # if better than current, store it
             if v > max_v:
-                next_best, max_v = next, v
+                next_best, max_v = next_, v
         # if max_v <= current value,
         # we've reached a local maximum (not good)
         # equal is used to avoid plateau (and thus loop)
@@ -44,8 +44,8 @@ def _tryToSolveG(formula):
 
 
 # iterator flipping one variable per iteration
-def _nextAssignment(assignment, vars):
-    for v in vars:
+def _nextAssignment(assignment, vars_):
+    for v in vars_:
         next_assignment = assignment[:]
         if v in assignment:
             next_assignment.remove(v)
@@ -65,9 +65,9 @@ def wsat_solve(formula, maxtries=1000, p=.9):
 
 
 def _tryToSolveW(formula, p):
-    clauses, vars = formula.clauses, formula.vars
+    clauses, vars_ = formula.clauses, formula.vars
     # compute random initial assignment
-    assignment = sample(vars, randint(0, len(vars)))
+    assignment = sample(vars_, randint(0, len(vars_)))
     cur = formula.clause_eval(assignment)
     while True:
         # reached a model for the formula, return it!
@@ -78,15 +78,15 @@ def _tryToSolveW(formula, p):
             max_v = 0
             next_best = None
             # all possible value flips for variables
-            for next in _nextAssignment(assignment, vars):
+            for next_ in _nextAssignment(assignment, vars_):
                 # evaluates the new assignment
-                v = formula.clause_eval(next)
+                v = formula.clause_eval(next_)
                 # if found, exit
                 if v == len(clauses):
-                    return next
+                    return next_
                 # if better than current, store it
                 if v > max_v:
-                    next_best, max_v = next, v
+                    next_best, max_v = next_, v
             # if max_v <= current value,
             # we've reached a local maximum (not good)
             # equal is used to avoid plateau (and thus loop)
@@ -97,7 +97,7 @@ def _tryToSolveW(formula, p):
         else:
             # compute unsatisfied clauses
             cl = choice([cl for cl in clauses
-                            if not cl.satisfied(assignment)])
+                         if not cl.satisfied(assignment)])
             # choose a random element
             var = choice(list(cl.var_list))
             # flips value

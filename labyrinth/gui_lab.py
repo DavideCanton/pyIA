@@ -2,7 +2,7 @@ from tkinter.tix import Tk
 from tkinter.ttk import Button, Label
 from PIL import Image, ImageTk
 from searching import a_star
-from labyrinth import NeighborsGenerator, heur_diag, \
+from labyrinth import NeighborsGenerator, NeighborsGeneratorJPS, heur_diag, \
     load_from_img, load_from_map_file, normalize
 import time
 import threading
@@ -15,8 +15,8 @@ SCALE = 1
 # time delay between each draw of the path
 PATH_DELAY_TIME = 0.
 # file path
-LAB_PATH = "D:/labyrinth/lab1.bmp"
-#LAB_PATH = "D:/labyrinth/map/ost000a.map"
+LAB_PATH = "img/lab4.bmp"
+#LAB_PATH = "img/map/ost000a.map"
 
 
 class GUI(Tk):
@@ -56,7 +56,7 @@ class GUI(Tk):
         if queue is None:
             queue = []
         for node in queue:
-            i, j = [int(x) for x in node[2]]  # convert numpy.int32 to int
+            i, j = [int(x) for x in node[1]]  # convert numpy.int32 to int
             h = self.heur_goal((i, j))
             x = h / self.max_heur
             r = int(x * 255)
@@ -83,7 +83,7 @@ class GUI(Tk):
         if not self.labyrinth.start or not self.labyrinth.goal:
             raise ValueError("Start or goal not found")
 
-        self.children_gen = NeighborsGenerator(self.labyrinth)
+        self.children_gen = NeighborsGeneratorJPS(self.labyrinth)
         self.heur = heur_diag
         self.heur_goal = self.heur(self.labyrinth.goal, self.labyrinth.start)
         self.max_heur = int(self.heur_goal(self.labyrinth.start))

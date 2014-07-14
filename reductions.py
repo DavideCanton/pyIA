@@ -1,4 +1,4 @@
-from pyIA import sat, logic
+from pyIA2 import sat, logic
 import itertools as it
 
 
@@ -28,7 +28,7 @@ def buildFormulaClique(edges):
 if __name__ == '__main__':
     edges = "ab|bc|bd|ae|be|ac|ce"
     edges = [tuple(e) for e in edges.split("|")]
-    formulaS = buildFormulaEC(edges)
+    formulaS = buildFormulaVC(edges)
     formula = logic.Parser().build_formula(formulaS)
     clauses, vars = formula.clauses, formula.vars
     print(" ^ ".join(map(str, clauses)))
@@ -40,7 +40,7 @@ if __name__ == '__main__':
         #    sol = formula.minimal_model
         #else:
         sol = sat.wsat_solve(formula)
-        if len(sol) < 3:
+        if len(sol) < 6:
             print(sol)
             exit()
     print("Nessuna soluzione trovata")
