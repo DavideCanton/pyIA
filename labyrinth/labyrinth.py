@@ -3,10 +3,12 @@ from math import sqrt
 import numpy as np
 from PIL import Image
 
-
-U, L, D, R, UL, UR, DL, DR = list(map(np.array, [(0, -1), (-1, 0), (0, 1),
-                                                 (1, 0), (-1, -1), (1, -1),
-                                                 (-1, 1), (1, 1)]))
+U = np.array([0, -1])
+L = np.array([-1, 0])
+D = -U
+R = -L
+UL, UR = U + L, U + R
+DL, DR = D + L, D + R
 
 SQRT_2 = sqrt(2)
 
@@ -150,16 +152,20 @@ class NeighborsGenerator:
         if self.right_free(x, y):
             neighbors.append((R + pos, 1))
 
-        if self.up_free(x, y) and self.left_free(x, y - 1) or self.left_free(x, y) and self.up_free(x - 1, y):
+        if (self.up_free(x, y) and self.left_free(x, y - 1) or
+            self.left_free(x, y) and self.up_free(x - 1, y)):
             neighbors.append((pos + UL, SQRT_2))
 
-        if self.up_free(x, y) and self.right_free(x, y - 1) or self.right_free(x, y) and self.up_free(x + 1, y):
+        if (self.up_free(x, y) and self.right_free(x, y - 1) or
+            self.right_free(x, y) and self.up_free(x + 1, y)):
             neighbors.append((pos + UR, SQRT_2))
 
-        if self.down_free(x, y) and self.left_free(x, y + 1) or self.left_free(x, y) and self.down_free(x - 1, y):
+        if (self.down_free(x, y) and self.left_free(x, y + 1) or
+            self.left_free(x, y) and self.down_free(x - 1, y)):
             neighbors.append((pos + DL, SQRT_2))
 
-        if self.down_free(x, y) and self.right_free(x, y + 1) or self.right_free(x, y) and self.down_free(x + 1, y):
+        if (self.down_free(x, y) and self.right_free(x, y + 1) or
+            self.right_free(x, y) and self.down_free(x + 1, y)):
             neighbors.append((pos + DR, SQRT_2))
 
         return neighbors
@@ -221,13 +227,13 @@ class NeighborsGeneratorJPS(NeighborsGenerator):
                 natural_neighbors = self.prune_straight(natural_neighbors,
                                                         current, move)
 
-            #jumping
+            # jumping
             real_neighbors = []
             for node in natural_neighbors:
-                #print("Called jump from", current, "towards", node - current)
+                # print("Called jump from", current, "towards", node - current)
                 jumped_to = self.jump_it_1(current, node - current,
                                            self.labyrinth.goal)
-                #print("Returned", jumped_to)
+                # print("Returned", jumped_to)
                 if jumped_to is not None:
                     distance = np.linalg.norm(jumped_to - current)
                     real_neighbors.append((jumped_to, distance))
@@ -332,7 +338,8 @@ class NeighborsGeneratorJPS(NeighborsGenerator):
             el = stack.pop()
             if el.stage == 0:
                 next_node = el.current + el.direction
-                if next_node not in self.labyrinth or not self.labyrinth[next_node]:
+                if (next_node not in self.labyrinth or
+                    not self.labyrinth[next_node]):
                     retval = None
                     continue
                 if np.array_equal(next_node, el.goal):
@@ -346,8 +353,10 @@ class NeighborsGeneratorJPS(NeighborsGenerator):
                         continue
                     forced = self.compute_forced_diag(el.current, el.direction)
                 else:
-                    forced = self.compute_forced_straight(next_node, el.direction)
-                if any(self.labyrinth[f] for f in forced if f in self.labyrinth):
+                    forced = self.compute_forced_straight(next_node,
+                                                          el.direction)
+                if any(self.labyrinth[f] for f in forced
+                       if f in self.labyrinth):
                     retval = next_node
                     continue
                 if isDiag:
@@ -356,7 +365,8 @@ class NeighborsGeneratorJPS(NeighborsGenerator):
                     stack.append(el)
                     dirs = list(components(direction))
                     el.dirs = dirs
-                    snapshot = Snapshot(next_node, dirs[0], el.goal, next_node, dirs, 0)
+                    snapshot = Snapshot(next_node, dirs[0],
+                                        el.goal, next_node, dirs, 0)
                     stack.append(snapshot)
                     continue
                 else:
