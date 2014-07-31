@@ -3,7 +3,8 @@ from tkinter.ttk import Button, Label
 from PIL import Image, ImageTk
 from searching import a_star
 from labyrinth import NeighborsGenerator, NeighborsGeneratorJPS, heur_diag, \
-    load_from_img, load_from_map_file, normalize
+    load_from_img, load_from_map_file, normalize, lab_to_im
+from gen_maze import maze
 import time
 import threading
 import itertools as it
@@ -11,12 +12,14 @@ import numpy as np
 
 
 # window scaling for small images
-SCALE = 1
+SCALE = 3
 # time delay between each draw of the path
 PATH_DELAY_TIME = 0.
 # file path
-LAB_PATH = "img/lab4.bmp"
-#LAB_PATH = "img/map/ost000a.map"
+MAZE_SIZE = 500, 300
+LAB_PATH = None
+# LAB_PATH = "img/lab4.bmp"
+# LAB_PATH = "img/map/ost000a.map"
 
 
 class GUI(Tk):
@@ -32,12 +35,18 @@ class GUI(Tk):
         """
         Loads the image from the file, using the appropriate function.
         """
-        print("Reading labyrinth from {}...".format(LAB_PATH))
-        if LAB_PATH.endswith("map"):
-            load_fun = load_from_map_file
+        if LAB_PATH is None:
+            print("Generating labyrinth...")
+            self.labyrinth = maze(*MAZE_SIZE)
+            self.im = lab_to_im(self.labyrinth)
         else:
-            load_fun = load_from_img
-        self.labyrinth, self.im = load_fun(LAB_PATH)
+            print("Reading labyrinth from {}...".format(LAB_PATH))
+            if LAB_PATH.endswith("map"):
+                load_fun = load_from_map_file
+            else:
+                load_fun = load_from_img
+            self.labyrinth, self.im = load_fun(LAB_PATH)
+
         self.pix = self.im.load()
         print("Read!")
         self.b1.configure(state="normal")
@@ -56,16 +65,16 @@ class GUI(Tk):
         if queue is None:
             queue = []
         for node in queue:
-            i, j = [int(x) for x in node[1]]  # convert numpy.int32 to int
-            h = self.heur_goal((i, j))
-            x = h / self.max_heur
-            r = int(x * 255)
-            g = int((1 - x) * 255)
-            self.pix[j, i] = r, g, 0
+            x, y = [int(x) for x in node[1]]  # convert numpy.int32 to int
+            h = self.heur_goal((x, y))
+            v = h / self.max_heur
+            r = int(v * 255)
+            g = int((1 - v) * 255)
+            self.pix[x, y] = r, g, 0
         for node in path:
-            i, j = node
-            self.pix[j, i] = 0, 0, 255
-        self.pix[self.labyrinth.start[1], self.labyrinth.start[0]] = 255, 0, 0
+            x, y = node
+            self.pix[x, y] = 0, 0, 255
+        self.pix[self.labyrinth.start[0], self.labyrinth.start[1]] = 255, 0, 0
         self.setImage(self.im)
 
     def start_alg(self):

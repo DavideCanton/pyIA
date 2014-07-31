@@ -153,19 +153,19 @@ class NeighborsGenerator:
             neighbors.append((R + pos, 1))
 
         if (self.up_free(x, y) and self.left_free(x, y - 1) or
-            self.left_free(x, y) and self.up_free(x - 1, y)):
+                    self.left_free(x, y) and self.up_free(x - 1, y)):
             neighbors.append((pos + UL, SQRT_2))
 
         if (self.up_free(x, y) and self.right_free(x, y - 1) or
-            self.right_free(x, y) and self.up_free(x + 1, y)):
+                    self.right_free(x, y) and self.up_free(x + 1, y)):
             neighbors.append((pos + UR, SQRT_2))
 
         if (self.down_free(x, y) and self.left_free(x, y + 1) or
-            self.left_free(x, y) and self.down_free(x - 1, y)):
+                    self.left_free(x, y) and self.down_free(x - 1, y)):
             neighbors.append((pos + DL, SQRT_2))
 
         if (self.down_free(x, y) and self.right_free(x, y + 1) or
-            self.right_free(x, y) and self.down_free(x + 1, y)):
+                    self.right_free(x, y) and self.down_free(x + 1, y)):
             neighbors.append((pos + DR, SQRT_2))
 
         return neighbors
@@ -339,7 +339,7 @@ class NeighborsGeneratorJPS(NeighborsGenerator):
             if el.stage == 0:
                 next_node = el.current + el.direction
                 if (next_node not in self.labyrinth or
-                    not self.labyrinth[next_node]):
+                        not self.labyrinth[next_node]):
                     retval = None
                     continue
                 if np.array_equal(next_node, el.goal):
@@ -555,23 +555,23 @@ def load_from_img(imgpath):
     """
     im = Image.open(imgpath)
     pix = im.load()
-    h, w = im.size
+    w, h = im.size
     labyrinth = Labyrinth(w, h)
 
-    for i in range(w):
-        for j in range(h):
+    for x in range(w):
+        for y in range(h):
             # avoid alpha
-            pixel = pix[j, i][:3]
+            pixel = pix[x, y][:3]
             if pixel == (255, 255, 255):
-                labyrinth[i, j] = 1
+                labyrinth[x, y] = 1
             elif pixel == (255, 0, 0):
-                labyrinth[i, j] = 1
-                labyrinth.start = i, j
+                labyrinth[x, y] = 1
+                labyrinth.start = x, y
             elif pixel == (0, 255, 0):
-                labyrinth[i, j] = 1
-                labyrinth.goal = i, j
+                labyrinth[x, y] = 1
+                labyrinth.goal = x, y
             else:
-                labyrinth[i, j] = 0
+                labyrinth[x, y] = 0
 
     return labyrinth, im
 
@@ -580,16 +580,18 @@ def lab_to_im(labyrinth):
     """
     Converts a labyrinth to a PIL image (useful for the GUI).
     """
-    im = Image.new("RGB", (labyrinth.h, labyrinth.w))
+    im = Image.new("RGB", (labyrinth.w, labyrinth.h))
     pix = im.load()
-    for i in range(labyrinth.w):
-        for j in range(labyrinth.h):
-            v = labyrinth[i, j]
-            pix[j, i] = (v * 255, v * 255, v * 255)
-    start = labyrinth.start
-    pix[start[1], start[0]] = (255, 0, 0)
-    goal = labyrinth.goal
-    pix[goal[1], goal[0]] = (0, 255, 0)
+    for x in range(labyrinth.w):
+        for y in range(labyrinth.h):
+            v = labyrinth[x, y]
+            pix[x, y] = (v * 255, v * 255, v * 255)
+    if labyrinth.start:
+        start = labyrinth.start
+        pix[start[0], start[1]] = (255, 0, 0)
+    if labyrinth.goal:
+        goal = labyrinth.goal
+        pix[goal[0], goal[1]] = (0, 255, 0)
     return im
 
 
