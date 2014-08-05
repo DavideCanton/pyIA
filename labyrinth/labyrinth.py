@@ -596,11 +596,11 @@ def lab_to_im(labyrinth):
 
 
 if __name__ == "__main__":
-    imgpath = r"D:\labyrinth\lab4.bmp"
+    imgpath = r"img\lab4.bmp"
     # imgpath = r"D:\labyrinth\map\arena.map"
     print("Reading labyrinth from {}...".format(imgpath))
     labyrinth, _ = load_from_img(imgpath)
     print("Read")
-    gen = NeighborsGeneratorPruning(labyrinth)
+    gen = NeighborsGeneratorJPS(labyrinth)
     for g in gen((2, 17), parent=(1, 16)):
         print(g)

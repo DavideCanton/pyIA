@@ -12,11 +12,12 @@ import numpy as np
 
 
 # window scaling for small images
-SCALE = 3
+SCALE = 1
 # time delay between each draw of the path
 PATH_DELAY_TIME = 0.
 # file path
-MAZE_SIZE = 500, 300
+MAZE_SIZE = 801, 601
+S = 10
 LAB_PATH = None
 # LAB_PATH = "img/lab4.bmp"
 # LAB_PATH = "img/map/ost000a.map"
@@ -37,7 +38,7 @@ class GUI(Tk):
         """
         if LAB_PATH is None:
             print("Generating labyrinth...")
-            self.labyrinth = maze(*MAZE_SIZE)
+            self.labyrinth = maze(*MAZE_SIZE, s=S)
             self.im = lab_to_im(self.labyrinth)
         else:
             print("Reading labyrinth from {}...".format(LAB_PATH))
