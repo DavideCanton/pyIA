@@ -7,8 +7,8 @@ import time
 import itertools as it
 
 # file path
-LAB_PATH = "D:/labyrinth/lab2.bmp"
-#LAB_PATH = "D:/labyrinth/map/ost000a.map"
+LAB_PATH = "img/lab2.bmp"
+# LAB_PATH = "img/map/ost100d.map"
 
 
 def pairwise(iterable):
@@ -45,7 +45,7 @@ def load_lab(path):
 
 
 def compute_path(labyrinth):
-    children_gen = lab_module.NeighborsGenerator(labyrinth)
+    children_gen = lab_module.NeighborsGeneratorJPS(labyrinth)
     heur_goal = lab_module.heur_diag(labyrinth.goal, labyrinth.start)
 
     eq_to_goal = lambda p: p == labyrinth.goal

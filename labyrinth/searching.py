@@ -47,12 +47,12 @@ def a_star(start, goal, h, gen_children, callback=None):
             return path, visited, info
 
         parent = parents.get(current)
-        #print("\nVisiting", current, "from", parent)
+        # print("\nVisiting", current, "from", parent)
 
         for generated in gen_children(current, parent):
             successor, weight = generated
             successor_depth = depth[current] + weight
-            #print("Generated", generated, "Depth =", successor_depth)
+            # print("Generated", generated, "Depth =", successor_depth)
             if successor in visited:
                 continue
             if successor_depth < depth.get(successor, INF):
@@ -60,8 +60,8 @@ def a_star(start, goal, h, gen_children, callback=None):
                 depth[successor] = successor_depth
                 h_score = h(successor)
                 f_score = successor_depth + h_score
-                #print("h-score of", successor, "=", h_score)
-                #print("Added", successor, "to queue with score", f_score)
+                # print("h-score of", successor, "=", h_score)
+                # print("Added", successor, "to queue with score", f_score)
                 hq.heappush(queue, (f_score, successor))
 
     return None, None, info

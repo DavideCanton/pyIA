@@ -1,7 +1,5 @@
 __author__ = 'davide'
 
-import collections
-
 
 class Element:
     def __init__(self, parent, rank=0, size=1):

@@ -77,13 +77,16 @@ class NeighborsGenerator:
     sqrt(2) units.
     """
 
-    def __init__(self, labyrinth):
+    def __init__(self, labyrinth, incr=1):
         """
         Creates the labyrinth.
         @param labyrinth: the labyrinth
         @type labyrinth: Labyrinth
+        @param incr: the increment (default 1)
+        @type incr: int
         """
         self.labyrinth = labyrinth
+        self.incr = incr
 
     def up_free(self, x, y):
         """
@@ -94,7 +97,7 @@ class NeighborsGenerator:
         @type y: int
         @return: bool
         """
-        return y > 0 and self.labyrinth[x, y - 1]
+        return y > (self.incr - 1) and self.labyrinth[x, y - self.incr]
 
     def down_free(self, x, y):
         """
@@ -105,7 +108,8 @@ class NeighborsGenerator:
         @type y: int
         @return: bool
         """
-        return y < self.labyrinth.h - 1 and self.labyrinth[x, y + 1]
+        return (y < self.labyrinth.h - self.incr and
+                self.labyrinth[x, y + self.incr])
 
     def left_free(self, x, y):
         """
@@ -116,7 +120,7 @@ class NeighborsGenerator:
         @type y: int
         @return: bool
         """
-        return x > 0 and self.labyrinth[x - 1, y]
+        return x > (self.incr - 1) and self.labyrinth[x - self.incr, y]
 
     def right_free(self, x, y):
         """
@@ -127,7 +131,8 @@ class NeighborsGenerator:
         @type y: int
         @return: bool
         """
-        return x < self.labyrinth.w - 1 and self.labyrinth[x + 1, y]
+        return (x < self.labyrinth.w - self.incr and
+                self.labyrinth[x + self.incr, y])
 
     def natural_neighbors(self, pos):
         """
@@ -152,21 +157,25 @@ class NeighborsGenerator:
         if self.right_free(x, y):
             neighbors.append((R + pos, 1))
 
-        if (self.up_free(x, y) and self.left_free(x, y - 1) or
-                    self.left_free(x, y) and self.up_free(x - 1, y)):
-            neighbors.append((pos + UL, SQRT_2))
+        p1 = self.up_free(x, y) and self.left_free(x, y - self.incr)
+        p2 = self.left_free(x, y) and self.up_free(x - self.incr, y)
+        if p1 or p2:
+            neighbors.append((pos + UL * self.incr, SQRT_2 * self.incr))
 
-        if (self.up_free(x, y) and self.right_free(x, y - 1) or
-                    self.right_free(x, y) and self.up_free(x + 1, y)):
-            neighbors.append((pos + UR, SQRT_2))
+        p1 = self.up_free(x, y) and self.right_free(x, y - self.incr)
+        p2 = self.right_free(x, y) and self.up_free(x + self.incr, y)
+        if p1 or p2:
+            neighbors.append((pos + UR * self.incr, SQRT_2 * self.incr))
 
-        if (self.down_free(x, y) and self.left_free(x, y + 1) or
-                    self.left_free(x, y) and self.down_free(x - 1, y)):
-            neighbors.append((pos + DL, SQRT_2))
+        p1 = self.down_free(x, y) and self.left_free(x, y + self.incr)
+        p2 = self.left_free(x, y) and self.down_free(x - self.incr, y)
+        if p1 or p2:
+            neighbors.append((pos + DL * self.incr, SQRT_2 * self.incr))
 
-        if (self.down_free(x, y) and self.right_free(x, y + 1) or
-                    self.right_free(x, y) and self.down_free(x + 1, y)):
-            neighbors.append((pos + DR, SQRT_2))
+        p1 = self.down_free(x, y) and self.right_free(x, y + self.incr)
+        p2 = self.right_free(x, y) and self.down_free(x + self.incr, y)
+        if p1 or p2:
+            neighbors.append((pos + DR * self.incr, SQRT_2 * self.incr))
 
         return neighbors
 
@@ -447,19 +456,21 @@ class Labyrinth:
     """
     Labyrinth class. Every position is stored as a binary number. lab[i,j] is
     0 if in the cell (i,j) there is an obstacle, else is 1.
-    Implemented as a sparse matrix.
+    Implemented as a set.
     """
 
-    def __init__(self, w, h):
+    def __init__(self, w, h, check=False):
         self.walls = set()
         self.w = w
         self.h = h
         self.start = None
         self.goal = None
+        self.check = check
 
     def __getitem__(self, item):
-        if item not in self:
+        if self.check and item not in self:
             raise ValueError("{} not contained in labyrinth".format(item))
+
         return int(tuple(item) not in self.walls)
 
     def __contains__(self, pos):
@@ -469,13 +480,17 @@ class Labyrinth:
         return 0 <= pos[0] < self.w and 0 <= pos[1] < self.h
 
     def __setitem__(self, key, value):
-        if key not in self:
+        if self.check and key not in self:
             raise ValueError("{} not contained in labyrinth".format(key))
+
         key = tuple(key)
         if value:
             self.walls.discard(key)
         else:
             self.walls.add(key)
+
+    def end_add(self):
+        pass
 
 
 def orthogonal(v):
@@ -523,27 +538,28 @@ def load_from_map_file(filepath, img=True):
     with open(filepath) as map_file:
         for line in map_file:
             if line.startswith("height"):
-                w = int(line.split()[1])
+                w = int(line.split()[1]) + 1
             elif line.startswith("width"):
-                h = int(line.split()[1])
+                h = int(line.split()[1]) + 1
             elif line.startswith("map"):
                 labyrinth = Labyrinth(w, h)
                 map_started = True
             elif map_started:
                 for j, c in enumerate(line):
                     if c in ".G":
-                        labyrinth[i, j] = 1
+                        labyrinth[j, i] = 1
                     elif c == "X":
-                        labyrinth[i, j] = 1
-                        labyrinth.start = (i, j)
+                        labyrinth[j, i] = 1
+                        labyrinth.start = j, i
                     elif c == "Y":
-                        labyrinth[i, j] = 1
-                        labyrinth.goal = (i, j)
+                        labyrinth[j, i] = 1
+                        labyrinth.goal = j, i
                     else:
-                        labyrinth[i, j] = 0
+                        labyrinth[j, i] = 0
                 i += 1
 
     im = lab_to_im(labyrinth) if img else None
+    labyrinth.end_add()
     return labyrinth, im
 
 
@@ -573,6 +589,7 @@ def load_from_img(imgpath):
             else:
                 labyrinth[x, y] = 0
 
+    labyrinth.end_add()
     return labyrinth, im
 
 

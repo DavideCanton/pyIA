@@ -248,6 +248,15 @@ def generic_search(start, is_goal, gen_children,
     return None, info
 
 
+class Reversed:
+    def __init__(self, gen):
+        self.vals = list(gen)
+        self.vals.reverse()
+
+    def __iter__(self):
+        yield from self.vals
+
+
 def depth_first(start, is_goal, gen_children, left=False, callback=None):
     if left:
         gen_children = Reversed(gen_children)

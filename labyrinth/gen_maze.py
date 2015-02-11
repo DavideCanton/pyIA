@@ -13,10 +13,12 @@ def flatten(i, j, w, h):
     return i * w + j
 
 
-def maze(w, h, s=2):
-    c = lambda n: (n - 1) // s + 1
-    nw, nh = c(w), c(h)
-    ns = s // 2 - 1
+def maze(w, h, size=2):
+    def conv_size(n):
+        return (n - 1) // size + 1
+
+    nw, nh = conv_size(w), conv_size(h)
+    ns = size // 2 - 1
     uf = UnionFind(nw * nh)
     lab = Labyrinth(w, h)
 
@@ -48,33 +50,33 @@ def maze(w, h, s=2):
         if uf.find(u) != uf.find(v):
             uf.union(u, v)
             if x2 - x1 == 1:
-                for i in range(s + 1):
+                for i in range(size + 1):
                     for j in range(1, ns + 1):
-                        ny = s * y1 - j
+                        ny = size * y1 - j
                         if ny >= 0:
-                            lab[s * x1 + i, ny] = True
+                            lab[size * x1 + i, ny] = True
                         else:
                             break
-                    lab[s * x1 + i, s * y1] = True
+                    lab[size * x1 + i, size * y1] = True
                     for j in range(1, ns + 1):
-                        ny = s * y1 + j
+                        ny = size * y1 + j
                         if ny < h:
-                            lab[s * x1 + i, ny] = True
+                            lab[size * x1 + i, ny] = True
                         else:
                             break
             else:
-                for i in range(s + 1):
+                for i in range(size + 1):
                     for j in range(1, ns + 1):
-                        nx = s * x1 - j
+                        nx = size * x1 - j
                         if nx >= 0:
-                            lab[nx, s * y1 + i] = True
+                            lab[nx, size * y1 + i] = True
                         else:
                             break
-                    lab[s * x1, s * y1 + i] = True
+                    lab[size * x1, size * y1 + i] = True
                     for j in range(1, ns + 1):
-                        nx = s * x1 + j
+                        nx = size * x1 + j
                         if nx < w:
-                            lab[nx, s * y1 + i] = True
+                            lab[nx, size * y1 + i] = True
                         else:
                             break
 

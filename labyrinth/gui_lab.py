@@ -1,15 +1,16 @@
 from tkinter.tix import Tk
 from tkinter.ttk import Button, Label
+import time
+import threading
+import itertools as it
+
 from PIL import Image, ImageTk
+import numpy as np
+
 from searching import a_star
 from labyrinth import NeighborsGenerator, NeighborsGeneratorJPS, heur_diag, \
     load_from_img, load_from_map_file, normalize, lab_to_im
 from gen_maze import maze
-import time
-import threading
-import itertools as it
-import numpy as np
-
 
 # window scaling for small images
 SCALE = 1
@@ -17,10 +18,10 @@ SCALE = 1
 PATH_DELAY_TIME = 0.
 # file path
 MAZE_SIZE = 801, 601
-S = 10
-LAB_PATH = None
-# LAB_PATH = "img/lab4.bmp"
-# LAB_PATH = "img/map/ost000a.map"
+SIZE = 10
+# LAB_PATH = None
+LAB_PATH = "img/lab6.png"
+# LAB_PATH = "img/map/ost100d.map"
 
 
 class GUI(Tk):
@@ -38,7 +39,7 @@ class GUI(Tk):
         """
         if LAB_PATH is None:
             print("Generating labyrinth...")
-            self.labyrinth = maze(*MAZE_SIZE, s=S)
+            self.labyrinth = maze(*MAZE_SIZE, size=SIZE)
             self.im = lab_to_im(self.labyrinth)
         else:
             print("Reading labyrinth from {}...".format(LAB_PATH))
@@ -61,10 +62,9 @@ class GUI(Tk):
         """
         Draws the A* queue, and eventually the path computed.
         """
-        if path is None:
-            path = []
-        if queue is None:
-            queue = []
+        path = path or []
+        queue = queue or []
+
         for node in queue:
             x, y = [int(x) for x in node[1]]  # convert numpy.int32 to int
             h = self.heur_goal((x, y))
@@ -75,7 +75,8 @@ class GUI(Tk):
         for node in path:
             x, y = node
             self.pix[x, y] = 0, 0, 255
-        self.pix[self.labyrinth.start[0], self.labyrinth.start[1]] = 255, 0, 0
+        start = self.labyrinth.start
+        self.pix[start[0], start[1]] = 255, 0, 0
         self.setImage(self.im)
 
     def start_alg(self):
@@ -102,7 +103,7 @@ class GUI(Tk):
         print("Goal detected:\t{}".format(self.labyrinth.goal))
         print("Starting search...")
 
-        eq_to_goal = lambda p: p == self.labyrinth.goal
+        eq_to_goal = lambda p: np.array_equal(p, self.labyrinth.goal)
         c_time = time.perf_counter()
         path, *_, info = a_star(self.labyrinth.start,
                                 eq_to_goal,
@@ -115,7 +116,7 @@ class GUI(Tk):
         else:
             cost = float("inf")
 
-        print(path)
+        # print(path)
 
         print("Search ended")
         print("Time:", round(c_time, 2), "s")
