@@ -1,16 +1,16 @@
+import itertools as it
+import threading
+import time
 from tkinter.tix import Tk
 from tkinter.ttk import Button, Label
-import time
-import threading
-import itertools as it
 
-from PIL import Image, ImageTk
 import numpy as np
+from PIL import Image, ImageTk
 
-from searching import a_star
-from labyrinth import NeighborsGenerator, NeighborsGeneratorJPS, heur_diag, \
-    load_from_img, load_from_map_file, normalize, lab_to_im
 from gen_maze import maze
+from labyrinth import NeighborsGeneratorJPS, heur_diag, \
+    load_from_img, load_from_map_file, normalize, lab_to_im
+from searching import a_star
 
 # window scaling for small images
 SCALE = 1
@@ -21,19 +21,33 @@ MAZE_SIZE = 801, 601
 SIZE = 10
 # LAB_PATH = None
 LAB_PATH = "img/lab6.png"
+
+
 # LAB_PATH = "img/map/ost100d.map"
 
 
 class GUI(Tk):
     def __init__(self, master=None):
         Tk.__init__(self, master)
+
+        self.labyrinth = None
+        self.pix = None
+        self.im = None
+        self.image = None
+        self.panel = None
+        self.newsize = None
+        self.children_gen = None
+        self.heur = None
+        self.heur_goal = None
+        self.max_heur = None
+
         self.b1 = Button(self, text="Start A*", command=self.start_alg)
         self.b1.grid(row=0, column=0)
         self.b1.configure(state="disabled")
-        self.load_thread = threading.Thread(target=self.initImage)
+        self.load_thread = threading.Thread(target=self.init_image)
         self.load_thread.start()
 
-    def initImage(self):
+    def init_image(self):
         """
         Loads the image from the file, using the appropriate function.
         """
@@ -53,7 +67,7 @@ class GUI(Tk):
         print("Read!")
         self.b1.configure(state="normal")
 
-    def setImage(self, im):
+    def set_image(self, im):
         im2 = im.resize(self.newsize, Image.NEAREST)
         self.image = ImageTk.PhotoImage(im2)
         self.panel.configure(image=self.image)
@@ -77,7 +91,7 @@ class GUI(Tk):
             self.pix[x, y] = 0, 0, 255
         start = self.labyrinth.start
         self.pix[start[0], start[1]] = 255, 0, 0
-        self.setImage(self.im)
+        self.set_image(self.im)
 
     def start_alg(self):
         children = list(self.children.values())
@@ -103,10 +117,9 @@ class GUI(Tk):
         print("Goal detected:\t{}".format(self.labyrinth.goal))
         print("Starting search...")
 
-        eq_to_goal = lambda p: np.array_equal(p, self.labyrinth.goal)
         c_time = time.perf_counter()
         path, *_, info = a_star(self.labyrinth.start,
-                                eq_to_goal,
+                                lambda p: np.array_equal(p, self.labyrinth.goal),
                                 self.heur_goal, self.children_gen,
                                 self.gui_callback)
         c_time = (time.perf_counter() - c_time)
@@ -167,5 +180,9 @@ class GUI(Tk):
         return expanded_path, cost
 
 
-if __name__ == '__main__':
+def main():
     GUI().mainloop()
+
+
+if __name__ == '__main__':
+    main()

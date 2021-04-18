@@ -1,7 +1,7 @@
 __author__ = 'davide'
 
 import unittest
-from labyrinth.labyrinth import Labyrinth
+from labyrinth import Labyrinth
 
 
 class MyTestCase(unittest.TestCase):
@@ -11,8 +11,7 @@ class MyTestCase(unittest.TestCase):
     def test_contains(self):
         for i in range(-10, 10):
             for j in range(-10, 10):
-                if (0 <= i < self.lab.w and
-                    0 <= j < self.lab.h):
+                if 0 <= i < self.lab.w and 0 <= j < self.lab.h:
                     self.assertTrue((i, j) in self.lab)
                 else:
                     self.assertFalse((i, j) in self.lab)

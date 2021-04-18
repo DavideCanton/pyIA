@@ -1,13 +1,12 @@
-from functools import total_ordering, reduce
-from operator import and_
 import itertools as it
-from random import randint, choice, sample, random
 import re
-from collections import defaultdict, deque
 import string
+from collections import defaultdict, deque
+from functools import total_ordering
+from random import randint, choice, sample, random
 
 __all__ = ["Clause", "Formula", "Variable", "Parser",
-           "randomFormula", "randomHornFormula"]
+           "random_formula", "random_horn_formula"]
 
 
 @total_ordering
@@ -27,18 +26,25 @@ class Variable:
     def id(self):
         return self._id
 
-    __repr__ = lambda self: self.name
-    __hash__ = lambda self: hash(self.name)
-    __eq__ = lambda self, v: self.name == v.name
-    __lt__ = lambda self, v: self.name < v.name
+    def __repr__(self):
+        return self.name
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, v):
+        return self.name == v.name
+
+    def __lt__(self, v):
+        return self.name < v.name
 
 
 class Formula:
     """Class representing a formula"""
 
-    def __init__(self, vars, clauses=None, heads=None):
-        """Build a formula from vars list and clause list"""
-        self.vars = set(vars)
+    def __init__(self, variables, clauses=None, heads=None):
+        """Build a formula from variables list and clause list"""
+        self.variables = set(variables)
         self.clauses = clauses if clauses is not None else []
         if heads is not None:
             self.set_heads(heads)
@@ -50,15 +56,15 @@ class Formula:
             raise ValueError("Lunghezze non compatibili")
         self.heads = []
         for h in heads:
-            l = []
+            ll = []
             for s in h:
                 if hasattr(s, "name"):
-                    l.append(s)
+                    ll.append(s)
                 else:
-                    for v in self.vars:
+                    for v in self.variables:
                         if v.name == s:
-                            l.append(v)
-            self.heads.append(set(l)) # TODO
+                            ll.append(v)
+            self.heads.append(set(ll))  # TODO
 
     def clause_eval(self, assignment):
         """Returns the number of clauses satisfied by assignment"""
@@ -75,7 +81,7 @@ class Formula:
         if self.is_horn:
             return model == self.minimal_model
         else:
-            reduct = self._reduceTo(model)
+            reduct = self._reduce_to(model)
             assert reduct.is_horn
             return model == reduct.minimal_model
 
@@ -85,8 +91,8 @@ class Formula:
             if self.is_stable_model(model):
                 yield model
 
-    def _reduceTo(self, model):
-        l = []
+    def _reduce_to(self, model):
+        ll = []
         for cl, h in zip(self.clauses, self.heads):
             cop = cl.copy()
             to_remove = False
@@ -99,13 +105,13 @@ class Formula:
                     to_remove = True
                     break
             if not to_remove:
-                l.append(cop)
-        return Formula(self.vars, l)
+                ll.append(cop)
+        return Formula(self.variables, ll)
 
     @property
     def imply_form(self):
         return (" ^ ".join("(" + cl.imply_form(h) + ")"
-            for cl, h in zip(self.clauses, self.heads)))
+                           for cl, h in zip(self.clauses, self.heads)))
 
     @property
     def is_horn(self):
@@ -152,13 +158,13 @@ class Formula:
     @property
     def models(self):
         """Generator yielding all models for the formula"""
-        for assignment in _generateSubsets(self.vars):
+        for assignment in _generate_subsets(self.variables):
             if self.satisfied(assignment):
                 yield set(assignment)
 
     def copy(self):
         cl = [c.copy() for c in self.clauses]
-        return Formula(vars=self.vars, clauses=cl)
+        return Formula(variables=self.variables, clauses=cl)
 
 
 class Clause:
@@ -207,12 +213,12 @@ class Clause:
             s = sp or sn
         return s
 
-    def toRule(self, head):
+    def to_rule(self, head):
         bn = self.pos_list - head
         return Rule(head=head, body_pos=self.neg_list, body_neg=bn)
 
     def imply_form(self, head):
-        return str(self.toRule(head))
+        return str(self.to_rule(head))
 
     def __eq__(self, cl):
         return (self.pos_list == cl.pos_list and
@@ -228,9 +234,9 @@ class Clause:
 class ImplyFormula:
     """Class representing a formula"""
 
-    def __init__(self, vars, rules=None):
-        """Build a formula from vars list and rules list"""
-        self.vars = set(vars)
+    def __init__(self, variables, rules=None):
+        """Build a formula from variables list and rules list"""
+        self.variables = set(variables)
         self.rules = rules if rules is not None else []
 
     def clause_eval(self, assignment):
@@ -246,9 +252,10 @@ class ImplyFormula:
 
     def is_stable_model(self, model):
         if self.is_horn:
-            return model == self.minimal_model
+            # TODO
+            return model in self.minimal_models
         else:
-            reduct = self._reduceTo(model)
+            reduct = self._reduce_to(model)
             return model == reduct.minimal_models
 
     @property
@@ -257,8 +264,8 @@ class ImplyFormula:
             if self.is_stable_model(model):
                 yield model
 
-    def _reduceTo(self, model):
-        l = []
+    def _reduce_to(self, model):
+        ll = []
         for cl in self.rules:
             cop = cl.copy()
             to_remove = False
@@ -269,8 +276,8 @@ class ImplyFormula:
                 else:
                     cop.body_neg.remove(v)
             if not to_remove:
-                l.append(cop)
-        return ImplyFormula(self.vars, l)
+                ll.append(cop)
+        return ImplyFormula(self.variables, ll)
 
     @property
     def disj_form(self):
@@ -285,12 +292,12 @@ class ImplyFormula:
         if self.is_horn:
             yield self._hornsat()
         else:
-            l = []
-            for s in _generateSubsets(self.vars):
+            ll = []
+            for s in _generate_subsets(self.variables):
                 s = set(s)
-                if self.satisfied(s) and not any(map(lambda x: x <= s, l)):
+                if self.satisfied(s) and not any(map(lambda x: x <= s, ll)):
                     yield s
-                    l.append(s)
+                    ll.append(s)
 
     def _hornsat(self):
         var_link = defaultdict(list)
@@ -326,13 +333,13 @@ class ImplyFormula:
     @property
     def models(self):
         """Generator yielding all models for the formula"""
-        for assignment in _generateSubsets(self.vars):
+        for assignment in _generate_subsets(self.variables):
             if self.satisfied(assignment):
                 yield set(assignment)
 
     def copy(self):
-        cl = [c.copy() for c in self.clauses]
-        return ImplyFormula(vars=self.vars, rules=cl)
+        rules = [r.copy() for r in self.rules]
+        return ImplyFormula(variables=self.variables, rules=rules)
 
 
 class Rule:
@@ -376,10 +383,10 @@ class Rule:
 
     @property
     def disj_form(self):
-        return str(self.toClause)
+        return str(self.as_clause)
 
     @property
-    def toClause(self):
+    def as_clause(self):
         return Clause(pos=self.head | self.body_neg, neg=self.body_pos)
 
     def __str__(self):
@@ -397,7 +404,8 @@ class Rule:
 
     def __eq__(self, cl):
         return (self.head == cl.head and
-                self.body == cl.body)
+                self.body_neg == cl.body_neg and
+                self.body_pos == cl.body_pos)
 
     def __hash__(self):
         return (13 * hash(self.head) +
@@ -405,56 +413,57 @@ class Rule:
                 23 * hash(self.body_neg))
 
     def copy(self):
-        return Rule(head=set(self.head), body_pos=set(self.body_pos),
+        return Rule(head=set(self.head),
+                    body_pos=set(self.body_pos),
                     body_neg=set(self.body_neg))
 
 
-def _generateSubsets(vars):
-    vars = sorted(vars)
+def _generate_subsets(variables):
+    variables = sorted(variables)
     yield []
-    for r in range(1, len(vars)):
-        for subset in it.combinations(vars, r):
+    for r in range(1, len(variables)):
+        for subset in it.combinations(variables, r):
             yield list(subset)
-    yield vars
+    yield variables
 
 
-def randomFormula(nvar=3, nclauses=5):
+def random_formula(nvar=3, nclauses=5):
     """Creates a random formula with nvar variables and
     a number of clauses uniformally distributed in [1, nclauses]"""
     nclauses = randint(1, nclauses + 1)
-    vars = [Variable(l) for l, _ in zip(string.ascii_letters, range(nvar))]
+    variables = [Variable(ll) for ll, _ in zip(string.ascii_letters, range(nvar))]
     cl = []
     while len(cl) != nclauses:
         try:
-            vars_c = sample(vars, randint(0, nvar))
-            neg = sample(vars, randint(0, nvar))
-            cl.append(Clause(vars_c, neg))
+            variables_c = sample(variables, randint(0, nvar))
+            neg = sample(variables, randint(0, nvar))
+            cl.append(Clause(variables_c, neg))
         except ValueError:
             pass
-    return Formula(vars=vars, clauses=cl)
+    return Formula(variables=variables, clauses=cl)
 
 
-def randomHornFormula(nvar=3, nclauses=5):
+def random_horn_formula(nvar=3, nclauses=5):
     """Creates a random Horn formula with nvar variables and
-    a number of clauses uniformally distributed in [1, nclauses]"""
+    a number of clauses uniformly distributed in [1, nclauses]"""
     nclauses = randint(1, nclauses + 1)
-    vars = [Variable(l) for l, _ in zip(string.ascii_letters, range(nvar))]
+    variables = [Variable(ll) for ll, _ in zip(string.ascii_letters, range(nvar))]
     cl = []
     while len(cl) != nclauses:
         try:
-            vars_c = [choice(vars)] if random() < 0.5 else []
-            neg = sample(vars, randint(0, nvar))
-            cl.append(Clause(vars_c, neg))
+            variables_c = [choice(variables)] if random() < 0.5 else []
+            neg = sample(variables, randint(0, nvar))
+            cl.append(Clause(variables_c, neg))
         except ValueError:
             pass
-    return Formula(vars=vars, clauses=cl)
+    return Formula(variables=variables, clauses=cl)
 
 
 class Parser:
     OR, AND, NOT, VAR, EOF = "OR", "AND", "NOT", "VAR", "EOF"
 
-    def __init__(self, or_expr="[ V|]",
-                 and_expr="[\^&]", not_expr="[!\xac]"):
+    def __init__(self, or_expr=r"[ V|]",
+                 and_expr=r"[\^&]", not_expr="[!\xac]"):
         self.or_expr = re.compile(or_expr)
         self.and_expr = re.compile(and_expr)
         self.not_expr = re.compile(not_expr)
@@ -488,55 +497,55 @@ class Parser:
 
     def build_formula(self, expression):
         # removes parenthesis
-        expression = re.sub("[)(]", "", expression)
+        expression = re.sub(r"[)(]", "", expression)
         # variables encountered during processing (String -> Variable)
-        vars = {}
+        variables = {}
         self._next(True, expression)
-        f = self._formula(vars)
+        f = self._formula(variables)
         self._ensure(Parser.EOF)
         return f
 
-    def _varn(self, vars):
+    def _varn(self, variables):
         if self.curToken == Parser.NOT:
             self._next()
             self._ensure(Parser.VAR)
             vn = self.curVar
-            if vn in vars:
-                var = vars[vn]
+            if vn in variables:
+                var = variables[vn]
             else:
                 var = Variable(vn)
-                vars[vn] = var
+                variables[vn] = var
             self._next()
             return var, False
         elif self.curToken == Parser.VAR:
             vn = self.curVar
-            if vn in vars:
-                var = vars[vn]
+            if vn in variables:
+                var = variables[vn]
             else:
                 var = Variable(vn)
-                vars[vn] = var
+                variables[vn] = var
             self._next()
             return var, True
         else:
             raise ValueError("Error in VARN")
 
-    def _clause(self, vars):
+    def _clause(self, variables):
         pos = []
         negs = []
-        var, positive = self._varn(vars)
+        var, positive = self._varn(variables)
         (pos if positive else negs).append(var)
         while self.curToken == Parser.OR:
             self._next()
-            var, positive = self._varn(vars)
+            var, positive = self._varn(variables)
             (pos if positive else negs).append(var)
         return Clause(pos, negs)
 
-    def _formula(self, vars):
-        clauses = [self._clause(vars)]
+    def _formula(self, variables):
+        clauses = [self._clause(variables)]
         while self.curToken == Parser.AND:
             self._next()
-            clauses.append(self._clause(vars))
-        return Formula(vars=list(vars.values()), clauses=clauses)
+            clauses.append(self._clause(variables))
+        return Formula(variables=list(variables.values()), clauses=clauses)
 
 
 class DimacsParser:
@@ -546,83 +555,24 @@ class DimacsParser:
         pass
 
     def _next(self, init=False, expression=""):
-        if init:
-            self.tokens = deque(expression.split())
-        if not self.tokens:
-            self.curToken = Parser.EOF
-            return
-        token = self.tokens.popleft()
-        if self.not_expr.match(token[0]):
-            v = token[1:]
-            self.tokens.appendleft(v)
-            self.curToken = Parser.NOT
-        elif self.or_expr.match(token):
-            self.curToken = Parser.OR
-        elif self.and_expr.match(token):
-            self.curToken = Parser.AND
-        else:
-            self.curVar = token
-            self.curToken = Parser.VAR
+        # TODO
+        pass
 
     def _ensure(self, token):
-        if self.curToken != token:
-            s = "Expected {}, got {}"
-            raise ValueError(s.format(token, self.curToken))
+        # TODO
+        pass
 
     def build_formula(self, expression):
         # removes parenthesis
         expression = re.sub("[)(]", "", expression)
         # variables encountered during processing (String -> Variable)
-        vars = {}
+        # variables = {}
         self._next(True, expression)
-        f = self._formula(vars)
         self._ensure(Parser.EOF)
-        return f
-
-    def _varn(self, vars):
-        if self.curToken == Parser.NOT:
-            self._next()
-            self._ensure(Parser.VAR)
-            vn = self.curVar
-            if vn in vars:
-                var = vars[vn]
-            else:
-                var = Variable(vn)
-                vars[vn] = var
-            self._next()
-            return var, False
-        elif self.curToken == Parser.VAR:
-            vn = self.curVar
-            if vn in vars:
-                var = vars[vn]
-            else:
-                var = Variable(vn)
-                vars[vn] = var
-            self._next()
-            return var, True
-        else:
-            raise ValueError("Error in VARN")
-
-    def _clause(self, vars):
-        pos = []
-        negs = []
-        var, positive = self._varn(vars)
-        (pos if positive else negs).append(var)
-        while self.curToken == Parser.OR:
-            self._next()
-            var, positive = self._varn(vars)
-            (pos if positive else negs).append(var)
-        return Clause(pos, negs)
-
-    def _formula(self, vars):
-        clauses = [self._clause(vars)]
-        while self.curToken == Parser.AND:
-            self._next()
-            clauses.append(self._clause(vars))
-        return Formula(vars=list(vars.values()), clauses=clauses)
+        pass
 
 
-if __name__ == '__main__':
+def main():
     f = Parser().build_formula("b V !a V c ^ c V !a V b ^ c V !b ^ b V !c ^ b V !a ^ d V !b V !c")
     hs = [{"b"}, {"c"}, {"c"}, {"b"}, {"b"}, {"d"}]
     f.set_heads(hs)
@@ -636,3 +586,7 @@ if __name__ == '__main__':
             print("Is it a model?", f.satisfied(min_model), sep="\t\t")
     print("List of Models:", list(f.models), sep="\t\t")
     print("List of Stable Models:", list(f.stable_models), sep="\t\t")
+
+
+if __name__ == '__main__':
+    main()

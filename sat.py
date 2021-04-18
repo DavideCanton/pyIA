@@ -8,15 +8,15 @@ def gsat_solve(formula, maxtries=1000):
     """Tries to solve a formula, resetting
     at most maxtries times using GSAT (greedy SAT) heuristic algorithm."""
     for _ in range(maxtries):
-        solution = _tryToSolveG(formula)
+        solution = _try_to_solve_g(formula)
         if solution is not None:
             return solution
 
 
-def _tryToSolveG(formula):
+def _try_to_solve_g(formula):
     clauses, vars_ = formula.clauses, formula.vars
     # compute random initial assignment
-    assignment = sample(vars_, randint(0, len(vars_)))
+    assignment = sample(list(vars_), randint(0, len(vars_)))
     cur = formula.clause_eval(assignment)
     while True:
         # if reached a model, returns it
@@ -25,7 +25,7 @@ def _tryToSolveG(formula):
         max_v = 0
         next_best = None
         # all possible value flips for variables
-        for next_ in _nextAssignment(assignment, vars_):
+        for next_ in _next_assignment(assignment, vars_):
             # evaluates the new assignment
             v = formula.clause_eval(next_)
             # if found, exit
@@ -44,7 +44,7 @@ def _tryToSolveG(formula):
 
 
 # iterator flipping one variable per iteration
-def _nextAssignment(assignment, vars_):
+def _next_assignment(assignment, vars_):
     for v in vars_:
         next_assignment = assignment[:]
         if v in assignment:
@@ -59,15 +59,15 @@ def wsat_solve(formula, maxtries=1000, p=.9):
     at most maxtries times with the WSAT (walking SAT) heuristic algorithm.
     The parameter p represent the probability of executing a GSAT iteration."""
     for _ in range(maxtries):
-        solution = _tryToSolveW(formula, p)
+        solution = _try_to_solve_w(formula, p)
         if solution is not None:
             return solution
 
 
-def _tryToSolveW(formula, p):
+def _try_to_solve_w(formula, p):
     clauses, vars_ = formula.clauses, formula.vars
     # compute random initial assignment
-    assignment = sample(vars_, randint(0, len(vars_)))
+    assignment = sample(list(vars_), randint(0, len(vars_)))
     cur = formula.clause_eval(assignment)
     while True:
         # reached a model for the formula, return it!
@@ -78,7 +78,7 @@ def _tryToSolveW(formula, p):
             max_v = 0
             next_best = None
             # all possible value flips for variables
-            for next_ in _nextAssignment(assignment, vars_):
+            for next_ in _next_assignment(assignment, vars_):
                 # evaluates the new assignment
                 v = formula.clause_eval(next_)
                 # if found, exit
@@ -109,9 +109,8 @@ def _tryToSolveW(formula, p):
             cur = formula.clause_eval(assignment)
 
 
-if __name__ == '__main__':
-    maxtries = 5000
-    formula = logic.randomHornFormula(nvar=3, nclauses=5)
+def main():
+    formula = logic.random_horn_formula(nvar=3, nclauses=5)
     print(formula)
     print(formula.imply_form)
     print("# vars:", len(formula.vars))
@@ -135,3 +134,7 @@ if __name__ == '__main__':
         print(mmodel <= wmodel)
     if gmodel is not None:
         print(mmodel <= gmodel)
+
+
+if __name__ == '__main__':
+    main()

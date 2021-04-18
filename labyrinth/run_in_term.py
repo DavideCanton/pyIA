@@ -8,6 +8,8 @@ import itertools as it
 
 # file path
 LAB_PATH = "img/lab2.bmp"
+
+
 # LAB_PATH = "img/map/ost100d.map"
 
 
@@ -17,7 +19,7 @@ def pairwise(iterable):
     return zip(a, b)
 
 
-def reconstruct_path(path, labyrinth):
+def reconstruct_path(path):
     """
     Reconstructs the complete path inserting nodes which
     were "jumped" by the generating function. This is possible
@@ -48,19 +50,20 @@ def compute_path(labyrinth):
     children_gen = lab_module.NeighborsGeneratorJPS(labyrinth)
     heur_goal = lab_module.heur_diag(labyrinth.goal, labyrinth.start)
 
-    eq_to_goal = lambda p: p == labyrinth.goal
     cur_time = time.perf_counter()
-    path, *_, info = searching.a_star(labyrinth.start, eq_to_goal,
-                                      heur_goal, children_gen)
+    path, *_, info = searching.a_star(labyrinth.start,
+                                      lambda p: p == labyrinth.goal,
+                                      heur_goal,
+                                      children_gen)
     cur_time = time.perf_counter() - cur_time
 
     if path:
-        path = reconstruct_path(path, labyrinth)
+        path = reconstruct_path(path)
 
     return path, cur_time, info
 
 
-if __name__ == "__main__":
+def main():
     labyrinth = load_lab(LAB_PATH)
 
     print("Start detected:\t{}".format(labyrinth.start))
@@ -80,3 +83,7 @@ if __name__ == "__main__":
         print("Found path of", len(path), "nodes")
         print("Path generation completed")
         print("*" * 100)
+
+
+if __name__ == '__main__':
+    main()

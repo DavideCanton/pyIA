@@ -5,7 +5,7 @@ from unionfind import UnionFind
 from labyrinth import Labyrinth, lab_to_im
 
 
-def unflatten(i, w, h):
+def reverse_flatten(i, w):
     return divmod(i, w)
 
 
@@ -45,8 +45,8 @@ def maze(w, h, size=2):
 
     while len(uf) > 1:
         u, v = edges.pop()
-        y1, x1 = unflatten(u, nw, nh)
-        y2, x2 = unflatten(v, nw, nh)
+        y1, x1 = reverse_flatten(u, nw)
+        y2, x2 = reverse_flatten(v, nw)
         if uf.find(u) != uf.find(v):
             uf.union(u, v)
             if x2 - x1 == 1:
@@ -97,9 +97,13 @@ def empty_maze(w, h):
     return lab
 
 
-if __name__ == "__main__":
+def main():
     w, h = 3, 5
 
     e = maze(w, h)
     im = lab_to_im(e)
-    # im.show()
+    im.show()
+
+
+if __name__ == '__main__':
+    main()

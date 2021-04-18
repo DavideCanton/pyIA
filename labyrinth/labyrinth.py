@@ -52,10 +52,10 @@ def heur_diag(goal, _):
     def wrapper(node):
         dx = abs(node[0] - goal[0])
         dy = abs(node[1] - goal[1])
-        m, M = dx, dy
-        if m > M:
-            m, M = M, m
-        return (m * (SQRT_2 - 1) + M) * 1.001  # break ties
+        m, n = dx, dy
+        if m > n:
+            m, n = n, m
+        return (m * (SQRT_2 - 1) + n) * 1.001  # break ties
 
     return wrapper
 
@@ -318,8 +318,8 @@ class NeighborsGeneratorJPS(NeighborsGenerator):
             return None
         if np.array_equal(next_node, goal):
             return next_node
-        isDiag = direction.all()
-        if isDiag:
+        is_diag = direction.all()
+        if is_diag:
             if all(not self.labyrinth[current + dirs]
                    for dirs in components(direction)):
                 return None
@@ -330,7 +330,7 @@ class NeighborsGeneratorJPS(NeighborsGenerator):
         if any(self.labyrinth[f] for f in forced if f in self.labyrinth):
             return next_node
 
-        if isDiag:
+        if is_diag:
             for dirt in components(direction):
                 if self.jump_rec(next_node, dirt, goal) is not None:
                     return next_node
@@ -354,8 +354,8 @@ class NeighborsGeneratorJPS(NeighborsGenerator):
                 if np.array_equal(next_node, el.goal):
                     retval = next_node
                     continue
-                isDiag = el.direction.all()
-                if isDiag:
+                is_diag = el.direction.all()
+                if is_diag:
                     if all(not self.labyrinth[el.current + dirs]
                            for dirs in components(direction)):
                         retval = None
@@ -368,7 +368,7 @@ class NeighborsGeneratorJPS(NeighborsGenerator):
                        if f in self.labyrinth):
                     retval = next_node
                     continue
-                if isDiag:
+                if is_diag:
                     el.stage = 1
                     el.next = next_node
                     stack.append(el)
@@ -417,8 +417,8 @@ class NeighborsGeneratorJPS(NeighborsGenerator):
                 return None
             if np.array_equal(next_node, goal):
                 return next_node  # assuming n cannot be None
-            isDiag = direction.all()
-            if isDiag:
+            is_diag = direction.all()
+            if is_diag:
                 if all(not self.labyrinth[current + dirs]
                        for dirs in components(direction)):
                     return None
@@ -428,7 +428,7 @@ class NeighborsGeneratorJPS(NeighborsGenerator):
             if any(self.labyrinth[f] for f in forced if f in self.labyrinth):
                 return next_node
 
-            if isDiag:
+            if is_diag:
                 stack.extend((next_node, di, goal)
                              for di in components(direction))
             else:
@@ -612,7 +612,7 @@ def lab_to_im(labyrinth):
     return im
 
 
-if __name__ == "__main__":
+def main():
     imgpath = r"img\lab4.bmp"
     # imgpath = r"D:\labyrinth\map\arena.map"
     print("Reading labyrinth from {}...".format(imgpath))
@@ -621,3 +621,7 @@ if __name__ == "__main__":
     gen = NeighborsGeneratorJPS(labyrinth)
     for g in gen((2, 17), parent=(1, 16)):
         print(g)
+
+
+if __name__ == '__main__':
+    main()

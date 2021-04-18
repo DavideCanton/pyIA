@@ -23,13 +23,14 @@ def a_star(start, goal, h, gen_children, callback=None):
     parents = {}
     queue = [(h(start), start)]
     visited = set()
-    INF = float("inf")
+    infinite = float("inf")
     info = Info(maxl=0, nodes=0)
 
     while queue:
         if callback:
             callback(queue)
 
+        # noinspection PyProtectedMember
         info = info._replace(maxl=max(len(queue), info.maxl),
                              nodes=info.nodes + 1)
 
@@ -55,7 +56,7 @@ def a_star(start, goal, h, gen_children, callback=None):
             # print("Generated", generated, "Depth =", successor_depth)
             if successor in visited:
                 continue
-            if successor_depth < depth.get(successor, INF):
+            if successor_depth < depth.get(successor, infinite):
                 parents[successor] = current
                 depth[successor] = successor_depth
                 h_score = h(successor)
