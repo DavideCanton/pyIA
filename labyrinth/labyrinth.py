@@ -1,4 +1,5 @@
 from math import sqrt
+from typing import Tuple, Callable, List
 
 import numpy as np
 from PIL import Image
@@ -12,8 +13,10 @@ DL, DR = D + L, D + R
 
 SQRT_2 = sqrt(2)
 
+Node = Tuple[int, int]
 
-def manhattan(goal, _):
+
+def manhattan(goal: Node, _: Node) -> Callable[[Node], float]:
     """
     Computes the Manhattan distance between the node and the goal.
     Example:
@@ -34,7 +37,7 @@ def manhattan(goal, _):
     return wrapper
 
 
-def heur_diag(goal, _):
+def heur_diag(goal: Node, _: Node) -> Callable[[Node], float]:
     """
     Computes the minimum distance between the node
     and the goal considering diagonal moves.
@@ -68,6 +71,47 @@ def array_to_tuple(func):
     return wrapper
 
 
+class Labyrinth:
+    """
+    Labyrinth class. Every position is stored as a binary number. lab[i,j] is
+    0 if in the cell (i,j) there is an obstacle, else is 1.
+    Implemented as a set.
+    """
+
+    def __init__(self, w: int, h: int, check=False) -> None:
+        self.walls = set()
+        self.w = w
+        self.h = h
+        self.start = None
+        self.goal = None
+        self.check = check
+
+    def __getitem__(self, item: Node) -> int:
+        if self.check and item not in self:
+            raise ValueError("{} not contained in labyrinth".format(item))
+
+        return int(tuple(item) not in self.walls)
+
+    def __contains__(self, pos: Node) -> bool:
+        """
+        Contains checks if pos is inside the labyrinth.
+        """
+        return 0 <= pos[0] < self.w and 0 <= pos[1] < self.h
+
+    def __setitem__(self, key: Node, value: bool) -> None:
+        if self.check and key not in self:
+            raise ValueError("{} not contained in labyrinth".format(key))
+
+        key = tuple(key)
+        if value:
+            self.walls.discard(key)
+        else:
+            self.walls.add(key)
+
+    def end_add(self) -> None:
+        pass
+
+
 class NeighborsGenerator:
     """
     Generates moves towards the 8 directions.
@@ -77,7 +121,7 @@ class NeighborsGenerator:
     sqrt(2) units.
     """
 
-    def __init__(self, labyrinth, incr=1):
+    def __init__(self, labyrinth: Labyrinth, incr=1):
         """
         Creates the labyrinth.
         @param labyrinth: the labyrinth
@@ -88,7 +132,7 @@ class NeighborsGenerator:
         self.labyrinth = labyrinth
         self.incr = incr
 
-    def up_free(self, x, y):
+    def up_free(self, x: int, y: int) -> bool:
         """
         Checks if up_move can be done
         @param x: the x coord
@@ -99,7 +143,7 @@ class NeighborsGenerator:
         """
         return y > (self.incr - 1) and self.labyrinth[x, y - self.incr]
 
-    def down_free(self, x, y):
+    def down_free(self, x: int, y: int) -> bool:
         """
         Checks if down_move can be done
         @param x: the x coord
@@ -111,7 +155,7 @@ class NeighborsGenerator:
         return (y < self.labyrinth.h - self.incr and
                 self.labyrinth[x, y + self.incr])
 
-    def left_free(self, x, y):
+    def left_free(self, x: int, y: int) -> bool:
         """
         Checks if left can be done
         @param x: the x coord
@@ -122,7 +166,7 @@ class NeighborsGenerator:
         """
         return x > (self.incr - 1) and self.labyrinth[x - self.incr, y]
 
-    def right_free(self, x, y):
+    def right_free(self, x: int, y: int) -> bool:
         """
         Checks if right_move can be done
         @param x: the x coord
@@ -134,7 +178,7 @@ class NeighborsGenerator:
         return (x < self.labyrinth.w - self.incr and
                 self.labyrinth[x + self.incr, y])
 
-    def natural_neighbors(self, pos):
+    def natural_neighbors(self, pos: Node) -> List[Node]:
         """
         Computes the natural neighbors of pos.
         @param pos: the position.
@@ -450,47 +494,6 @@ class Snapshot:
 
     def __str__(self):
         return str(self.__dict__)
-
-
-class Labyrinth:
-    """
-    Labyrinth class. Every position is stored as a binary number. lab[i,j] is
-    0 if in the cell (i,j) there is an obstacle, else is 1.
-    Implemented as a set.
-    """
-
-    def __init__(self, w, h, check=False):
-        self.walls = set()
-        self.w = w
-        self.h = h
-        self.start = None
-        self.goal = None
-        self.check = check
-
-    def __getitem__(self, item):
-        if self.check and item not in self:
-            raise ValueError("{} not contained in labyrinth".format(item))
-
-        return int(tuple(item) not in self.walls)
-
-    def __contains__(self, pos):
-        """
-        Contains checks if pos is inside the labyrinth.
-        """
-        return 0 <= pos[0] < self.w and 0 <= pos[1] < self.h
-
-    def __setitem__(self, key, value):
-        if self.check and key not in self:
-            raise ValueError("{} not contained in labyrinth".format(key))
-
-        key = tuple(key)
-        if value:
-            self.walls.discard(key)
-        else:
-            self.walls.add(key)
-
-    def end_add(self):
-        pass
 
 
 def orthogonal(v):

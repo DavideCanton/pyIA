@@ -1,11 +1,14 @@
 import heapq as hq
 from collections import namedtuple
+from typing import TypeVar, Callable, Iterable, Tuple, Optional, Set, List
 
-
+T = TypeVar('T')
 Info = namedtuple("Info", "maxl nodes")
+Queue = List[Tuple[float, T]]
 
 
-def a_star(start, goal, h, gen_children, callback=None):
+def a_star(start: T, goal: T, h: Callable[[T], float], gen_children: Callable[[T, T], Iterable[T]],
+           callback: Optional[Callable[[Queue], None]] = None) -> Tuple[List[T], Set[T], Info]:
     """
     A* algorithm, receives the start node, the goal node,
     the heuristic function h(n), a callable generating node

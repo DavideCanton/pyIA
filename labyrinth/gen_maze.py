@@ -1,20 +1,22 @@
 __author__ = 'davide'
 
 from random import shuffle
-from unionfind import UnionFind
+from typing import Tuple
+
 from labyrinth import Labyrinth, lab_to_im
+from unionfind import UnionFind
 
 
-def reverse_flatten(i, w):
+def reverse_flatten(i: int, w: int) -> Tuple[int, int]:
     return divmod(i, w)
 
 
-def flatten(i, j, w, h):
+def flatten(i: int, j: int, w: int, h: int) -> int:
     return i * w + j
 
 
-def maze(w, h, size=2):
-    def conv_size(n):
+def maze(w: int, h: int, size: int = 2):
+    def conv_size(n: int) -> int:
         return (n - 1) // size + 1
 
     nw, nh = conv_size(w), conv_size(h)
@@ -88,7 +90,7 @@ def maze(w, h, size=2):
     return lab
 
 
-def empty_maze(w, h):
+def empty_maze(w: int, h: int) -> Labyrinth:
     lab = Labyrinth(w, h)
     lab[0, 0] = 1
     lab.start = 0, 0
@@ -97,7 +99,7 @@ def empty_maze(w, h):
     return lab
 
 
-def main():
+def main() -> None:
     w, h = 3, 5
 
     e = maze(w, h)

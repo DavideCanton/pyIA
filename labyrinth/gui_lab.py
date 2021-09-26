@@ -20,7 +20,7 @@ PATH_DELAY_TIME = 0.
 MAZE_SIZE = 801, 601
 SIZE = 10
 # LAB_PATH = None
-LAB_PATH = "img/lab6.png"
+LAB_PATH = "img/lab7.png"
 
 
 # LAB_PATH = "img/map/ost100d.map"
