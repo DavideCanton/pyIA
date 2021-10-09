@@ -110,7 +110,7 @@ class Formula:
 
     @property
     def imply_form(self):
-        return (" ^ ".join("(" + cl.imply_form(h) + ")"
+        return (" ^ ".join(f"({cl.imply_form(h)})"
                            for cl, h in zip(self.clauses, self.heads)))
 
     @property
@@ -281,7 +281,7 @@ class ImplyFormula:
 
     @property
     def disj_form(self):
-        return " ^ ".join("(" + cl.disj_form + ")" for cl in self.rules)
+        return " ^ ".join(f"({cl.disj_form})" for cl in self.rules)
 
     @property
     def is_horn(self):
@@ -392,7 +392,7 @@ class Rule:
     def __str__(self):
         h = Rule.or_sep.join(var.name for var in self.head)
         bp = Rule.and_sep.join(var.name for var in self.body_pos)
-        bn = Rule.or_sep.join("\xac" + var.name for var in self.body_neg)
+        bn = Rule.or_sep.join(f"\xac{var.name}" for var in self.body_neg)
         if bp or bn:
             if bp and bn:
                 b = Rule.and_sep.join((bp, bn))
@@ -492,8 +492,8 @@ class Parser:
 
     def _ensure(self, token):
         if self.curToken != token:
-            s = "Expected {}, got {}"
-            raise ValueError(s.format(token, self.curToken))
+            s = f"Expected {token}, got {self.curToken}"
+            raise ValueError(s)
 
     def build_formula(self, expression):
         # removes parenthesis

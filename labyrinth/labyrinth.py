@@ -98,7 +98,7 @@ class Labyrinth:
         """
         return 0 <= pos[0] < self.w and 0 <= pos[1] < self.h
 
-    def __setitem__(self, key: Node, value: bool) -> None:
+    def __setitem__(self, key: Node, value: bool | int) -> None:
         if self.check and key not in self:
             raise ValueError("{} not contained in labyrinth".format(key))
 
@@ -580,17 +580,17 @@ def load_from_img(imgpath):
     for x in range(w):
         for y in range(h):
             # avoid alpha
-            pixel = pix[x, y][:3]
-            if pixel == (255, 255, 255):
-                labyrinth[x, y] = 1
-            elif pixel == (255, 0, 0):
-                labyrinth[x, y] = 1
-                labyrinth.start = x, y
-            elif pixel == (0, 255, 0):
-                labyrinth[x, y] = 1
-                labyrinth.goal = x, y
-            else:
-                labyrinth[x, y] = 0
+            match pix[x, y][:3]:
+                case (255, 255, 255):
+                    labyrinth[x, y] = 1
+                case (255, 0, 0):
+                    labyrinth[x, y] = 1
+                    labyrinth.start = x, y
+                case (0, 255, 0):
+                    labyrinth[x, y] = 1
+                    labyrinth.goal = x, y
+                case _:
+                    labyrinth[x, y] = 0
 
     labyrinth.end_add()
     return labyrinth, im

@@ -127,7 +127,7 @@ def main():
         gmodel = set(gmodel)
         print(gmodel)
         print(formula.satisfied(gmodel))
-    print("Horn formula?", ('yes' if formula.is_horn else 'no'))
+    print("Horn formula?", 'yes' if formula.is_horn else 'no')
     mmodel = formula.minimal_model
     print("Minimal model:", mmodel)
     if wmodel is not None:

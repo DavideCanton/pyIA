@@ -1,7 +1,7 @@
 import itertools as it
 import threading
 import time
-from tkinter.tix import Tk
+from tkinter import Tk
 from tkinter.ttk import Button, Label
 
 import numpy as np

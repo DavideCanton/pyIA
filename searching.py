@@ -27,8 +27,7 @@ class Node:
         return self.value < val.value
 
     def __repr__(self):
-        return ("<Node, cnt: {}, val: {}, dpt: {}>"
-                .format(self.content, self.value, self.depth))
+        return f"<Node, cnt: {self.content}, val: {self.value}, dpt: {self.depth}>"
 
 
 class Info:
@@ -37,8 +36,7 @@ class Info:
         self.nodes = nodes
 
     def __repr__(self):
-        return ("Info[Max Length: {}, Nodes processed: {}]"
-                .format(self.maxl, self.nodes))
+        return f"Info[Max Length: {self.maxl}, Nodes processed: {self.nodes}]"
 
 
 def simulated_annealing(start, goal, h, gen_children, schedule, callback=None):
